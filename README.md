@@ -4,7 +4,7 @@ A 3D / 2.5D web recreation of **Doodle Army 2: Mini Militia** built with **Three
 
 Experience the classic intense combat with rocket boots, wave-based militia bot survival, dual touch joysticks or keyboard/mouse controls, and authentic sound effects.
 
-![Concept Art](eb795264-1e50-4cf9-9fb2-1d28624a1293.jpg)
+![Concept Art](idea.avif)
 
 ---
 
