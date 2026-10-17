@@ -1071,9 +1071,69 @@ export class Game {
       btnTestMode.addEventListener('click', () => this.toggleTestMode());
     }
 
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+    if (btnFullscreen) {
+      btnFullscreen.addEventListener('click', () => this.toggleFullscreen());
+    }
+
+    const btnPauseFs = document.getElementById('btn-pause-fullscreen');
+    if (btnPauseFs) {
+      btnPauseFs.addEventListener('click', () => this.toggleFullscreen());
+    }
+
+    document.addEventListener('fullscreenchange', () => this.updateFullscreenUI());
+    document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenUI());
+
     const btnPlayAgain = document.getElementById('btn-play-again');
     if (btnPlayAgain) {
       btnPlayAgain.addEventListener('click', () => window.location.reload());
+    }
+  }
+
+  public toggleFullscreen(): void {
+    const doc = document as any;
+    const docEl = document.documentElement as any;
+
+    const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+
+    if (!isFullscreen) {
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      } else if (docEl.msRequestFullscreen) {
+        docEl.msRequestFullscreen();
+      }
+    } else {
+      if (doc.exitFullscreen) {
+        doc.exitFullscreen().catch(() => {});
+      } else if (doc.webkitExitFullscreen) {
+        doc.webkitExitFullscreen();
+      } else if (doc.msExitFullscreen) {
+        doc.msExitFullscreen();
+      }
+    }
+  }
+
+  private updateFullscreenUI(): void {
+    const doc = document as any;
+    const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+
+    const expandIcon = document.getElementById('fs-expand-icon');
+    const collapseIcon = document.getElementById('fs-collapse-icon');
+    if (expandIcon && collapseIcon) {
+      if (isFullscreen) {
+        expandIcon.classList.add('hidden');
+        collapseIcon.classList.remove('hidden');
+      } else {
+        expandIcon.classList.remove('hidden');
+        collapseIcon.classList.add('hidden');
+      }
+    }
+
+    const btnPauseFs = document.getElementById('btn-pause-fullscreen');
+    if (btnPauseFs) {
+      btnPauseFs.textContent = isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
     }
   }
 
