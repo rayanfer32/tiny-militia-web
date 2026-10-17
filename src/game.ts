@@ -156,11 +156,13 @@ export class Game {
   }
 
   private spawnPlayer(): void {
-    let spawnX = 0, spawnY = 4;
+    let spawnX = 0, spawnY = 8;
     if (this.map.spawns.length > 0) {
-      const sp = this.map.spawns[0];
-      spawnX = sp.x;
-      spawnY = sp.y;
+      const centerSp = this.map.spawns.reduce((closest, s) =>
+        Math.hypot(s.x, s.y) < Math.hypot(closest.x, closest.y) ? s : closest
+      );
+      spawnX = centerSp.x;
+      spawnY = centerSp.y;
     }
 
     this.player = {
@@ -505,6 +507,7 @@ export class Game {
       aimAngle = Math.atan2(this.joysticks.aim.y, this.joysticks.aim.x);
       p.facingRight = this.joysticks.aim.x >= 0;
     } else {
+      this.updateMouseWorldPos();
       const dx = this.mouse.worldX - p.pos.x;
       const dy = this.mouse.worldY - (p.pos.y + 0.7);
       aimAngle = Math.atan2(dy, dx);
@@ -513,7 +516,11 @@ export class Game {
 
     p.aimAngle = aimAngle;
     p.model.root.scale.x = p.facingRight ? 1 : -1;
-    p.model.armPivot.rotation.z = p.facingRight ? aimAngle : Math.PI - aimAngle;
+    // Rotate arm in local space: in flipped root space, X is inverted
+    p.model.armPivot.rotation.z = Math.atan2(
+      Math.sin(aimAngle),
+      p.facingRight ? Math.cos(aimAngle) : -Math.cos(aimAngle)
+    );
 
     const wantsToShoot = this.mouse.down || (this.joysticks.aim.active && Math.hypot(this.joysticks.aim.x, this.joysticks.aim.y) > 0.45);
     const now = performance.now() / 1000;
@@ -525,7 +532,7 @@ export class Game {
       sounds.play(p.weapon.def.sound, { volume: 0.95 });
       this.addScreenShake(p.weapon.def.isRocket ? 0.45 : 0.12);
 
-      const worldAim = p.facingRight ? p.aimAngle : Math.PI - p.aimAngle;
+      const worldAim = p.aimAngle;
       const muzzleX = p.pos.x + Math.cos(worldAim) * 0.95;
       const muzzleY = p.pos.y + 0.7 + Math.sin(worldAim) * 0.95;
 
@@ -694,11 +701,11 @@ export class Game {
   private updateCamera(dt: number): void {
     if (!this.player) return;
 
-    const leadX = Math.cos(this.player.aimAngle) * 4;
-    const leadY = Math.sin(this.player.aimAngle) * 2;
+    const leadX = Math.cos(this.player.aimAngle) * 2.0;
+    const leadY = Math.sin(this.player.aimAngle) * 1.2;
 
-    this.camTarget.x = THREE.MathUtils.lerp(this.camTarget.x, this.player.pos.x + leadX, 0.08);
-    this.camTarget.y = THREE.MathUtils.lerp(this.camTarget.y, this.player.pos.y + leadY + 1.2, 0.08);
+    this.camTarget.x = THREE.MathUtils.lerp(this.camTarget.x, this.player.pos.x + leadX, 0.14);
+    this.camTarget.y = THREE.MathUtils.lerp(this.camTarget.y, this.player.pos.y + leadY + 1.2, 0.14);
 
     let shakeOffsetX = 0, shakeOffsetY = 0;
     if (this.screenShake > 0) {
@@ -810,6 +817,20 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
+  private updateMouseWorldPos(): void {
+    const vec = new THREE.Vector3(
+      (this.mouse.x / window.innerWidth) * 2 - 1,
+      -(this.mouse.y / window.innerHeight) * 2 + 1,
+      0.5
+    );
+    vec.unproject(this.camera);
+    vec.sub(this.camera.position).normalize();
+    const distance = -this.camera.position.z / vec.z;
+    const worldPos = this.camera.position.clone().add(vec.multiplyScalar(distance));
+    this.mouse.worldX = worldPos.x;
+    this.mouse.worldY = worldPos.y;
+  }
+
   private setupEventListeners(): void {
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -846,18 +867,7 @@ export class Game {
     window.addEventListener('mousemove', (e: MouseEvent) => {
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
-
-      const vec = new THREE.Vector3(
-        (e.clientX / window.innerWidth) * 2 - 1,
-        -(e.clientY / window.innerHeight) * 2 + 1,
-        0.5
-      );
-      vec.unproject(this.camera);
-      vec.sub(this.camera.position).normalize();
-      const distance = -this.camera.position.z / vec.z;
-      const worldPos = this.camera.position.clone().add(vec.multiplyScalar(distance));
-      this.mouse.worldX = worldPos.x;
-      this.mouse.worldY = worldPos.y;
+      this.updateMouseWorldPos();
     });
 
     window.addEventListener('mousedown', (e: MouseEvent) => {

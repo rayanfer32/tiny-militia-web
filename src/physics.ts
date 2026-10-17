@@ -145,8 +145,8 @@ export class PhysicsEngine {
           if (vel) {
             const dot = vel.x * nx + vel.y * ny;
             if (dot < 0) {
-              vel.x -= dot * nx * 1.1; // small bounce
-              vel.y -= dot * ny * 1.1;
+              vel.x -= dot * nx;
+              vel.y -= dot * ny;
             }
           }
           collided = true;

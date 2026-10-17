@@ -94,8 +94,8 @@ export function createSoldierModel(options: SoldierModelOptions = {}): SoldierMo
   } else if (helmetColor === 'beret') {
     const beretGeo = new THREE.CylinderGeometry(0.44, 0.36, 0.18, 10);
     const beret = new THREE.Mesh(beretGeo, MATS.beretGreen);
-    beret.position.set(0.04, 1.25, 0);
-    beret.rotation.z = -0.25;
+    beret.position.set(0, 1.22, 0);
+    beret.rotation.z = 0;
     group.add(beret);
   } else {
     const helmGeo = new THREE.SphereGeometry(0.42, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55);

@@ -144,12 +144,14 @@ export class Bot {
     const dy = player.pos.y - this.pos.y;
     const dist = Math.hypot(dx, dy);
 
-    this.facingRight = dx > 0;
-    this.model.root.scale.x = this.facingRight ? 1 : -1;
-
-    const angleToPlayer = Math.atan2(dy, this.facingRight ? dx : -dx);
+    const angleToPlayer = Math.atan2(dy, dx);
     this.aimAngle = THREE.MathUtils.lerp(this.aimAngle, angleToPlayer, 0.15);
-    this.model.armPivot.rotation.z = this.aimAngle;
+    this.facingRight = Math.cos(this.aimAngle) >= 0;
+    this.model.root.scale.x = this.facingRight ? 1 : -1;
+    this.model.armPivot.rotation.z = Math.atan2(
+      Math.sin(this.aimAngle),
+      this.facingRight ? Math.cos(this.aimAngle) : -Math.cos(this.aimAngle)
+    );
 
     this.thinkTimer -= dt;
     if (this.thinkTimer <= 0) {
@@ -246,7 +248,7 @@ export class Bot {
         const pan = Math.max(-1, Math.min(1, (this.pos.x - player.pos.x) / 20));
         sounds.play(this.weapon.def.sound, { pan, volume: 0.7 });
 
-        const worldAim = this.facingRight ? this.aimAngle : Math.PI - this.aimAngle;
+        const worldAim = this.aimAngle;
         const muzzleX = this.pos.x + Math.cos(worldAim) * 0.9;
         const muzzleY = this.pos.y + 0.7 + Math.sin(worldAim) * 0.9;
 
