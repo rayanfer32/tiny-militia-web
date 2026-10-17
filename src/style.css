@@ -739,6 +739,54 @@ html, body {
   margin-bottom: 3px;
 }
 
+.start-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.btn-fullscreen-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(0, 240, 255, 0.15);
+  border: 1.5px solid rgba(0, 240, 255, 0.5);
+  color: #00f0ff;
+  font-family: var(--font-hud);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 240, 255, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-fullscreen-action svg {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-fullscreen-action:hover,
+.btn-fullscreen-action.active {
+  background: rgba(0, 240, 255, 0.3);
+  border-color: #00f0ff;
+  box-shadow: 0 6px 25px rgba(0, 240, 255, 0.45);
+  transform: translateY(-2px);
+}
+
+.btn-fullscreen-action:active {
+  transform: translateY(1px);
+}
+
+.start-actions .btn-primary-action {
+  flex: 1.6;
+}
+
 .btn-primary-action {
   width: 100%;
   padding: 16px;
@@ -1114,10 +1162,15 @@ body.pointer-locked #game-canvas {
 
   .controls-preview-grid {
     padding: 6px 12px;
-    gap: 12px;
+    gap: 8px;
     margin-bottom: 8px;
     font-size: 0.66rem;
     border-radius: 8px;
+    grid-template-columns: 1fr;
+  }
+
+  .ctrl-col.ctrl-desktop {
+    display: none !important; /* Hide keyboard/mouse controls on landscape phones */
   }
 
   .ctrl-col strong {
@@ -1127,6 +1180,33 @@ body.pointer-locked #game-canvas {
 
   .ctrl-col div {
     margin-bottom: 1px;
+  }
+
+  .start-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .btn-fullscreen-action {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    flex: 1;
+    gap: 6px;
+  }
+
+  .btn-fullscreen-action svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .start-actions .btn-primary-action {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    letter-spacing: 1.2px;
+    flex: 1.5;
   }
 
   .btn-primary-action {
@@ -1500,8 +1580,118 @@ body.pointer-locked #game-canvas {
   }
 }
 
+/* Ultra-short landscape screens (e.g. phones with Chrome URL bar / navbar visible) */
+@media (max-height: 440px) {
+  .menu-overlay {
+    padding: max(4px, env(safe-area-inset-top, 4px)) max(8px, env(safe-area-inset-right, 8px)) max(4px, env(safe-area-inset-bottom, 4px)) max(8px, env(safe-area-inset-left, 8px));
+  }
+
+  .menu-card {
+    padding: 6px 14px;
+    max-width: 460px;
+    border-radius: 10px;
+    border-width: 1px;
+  }
+
+  .game-logo {
+    font-size: 1.3rem;
+    letter-spacing: 1.5px;
+  }
+
+  .tagline {
+    font-size: 0.55rem;
+    margin-top: 1px;
+  }
+
+  .soldier-preview-badge {
+    display: none !important;
+  }
+
+  .intro-desc {
+    display: none !important;
+  }
+
+  .controls-preview-grid {
+    padding: 3px 8px;
+    margin-bottom: 6px;
+    font-size: 0.6rem;
+    border-radius: 6px;
+    grid-template-columns: 1fr;
+  }
+
+  .ctrl-col.ctrl-desktop {
+    display: none !important;
+  }
+
+  .ctrl-col div {
+    margin-bottom: 0;
+  }
+
+  .start-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn-fullscreen-action {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    gap: 5px;
+    flex: 1;
+  }
+
+  .btn-fullscreen-action svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .start-actions .btn-primary-action {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    border-radius: 8px;
+    flex: 1.5;
+  }
+
+  /* In-game HUD in Ultra-short landscape */
+  .touch-controls {
+    height: 115px;
+  }
+
+  .joystick-zone {
+    width: 95px;
+    height: 95px;
+  }
+
+  .joystick-nub {
+    width: 32px;
+    height: 32px;
+    top: calc(50% - 16px);
+    left: calc(50% - 16px);
+  }
+
+  .action-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .status-panel {
+    min-width: 140px;
+    padding: 3px 6px;
+  }
+
+  .meter-bar-wrapper {
+    height: 8px;
+  }
+}
+
 /* Touchscreens generally */
 @media (hover: none) and (pointer: coarse) {
+  .ctrl-col.ctrl-desktop {
+    display: none !important;
+  }
+  .controls-preview-grid {
+    grid-template-columns: 1fr;
+  }
   .target-indicator,
   .pointer-lock-prompt,
   .desktop-hints {

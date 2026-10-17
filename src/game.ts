@@ -162,6 +162,7 @@ export class Game {
   }
 
   public async start(): Promise<void> {
+    Game.enterFullscreen();
     sounds.init();
     await this.map.load();
 
@@ -1029,6 +1030,7 @@ export class Game {
     });
 
     this.canvas.addEventListener('click', () => {
+      Game.enterFullscreen();
       if (!this.isPaused && !this.isGameOver && !this.isPointerLocked && !this.isUsingTouch) {
         this.requestPointerLock();
       }
@@ -1119,6 +1121,7 @@ export class Game {
 
     window.addEventListener('touchstart', () => {
       this.isUsingTouch = true;
+      Game.enterFullscreen();
       if (this.targetIndicatorElem) this.targetIndicatorElem.classList.add('hidden');
       if (this.pointerLockPromptElem) this.pointerLockPromptElem.classList.add('hidden');
     }, { passive: true });
@@ -1255,6 +1258,11 @@ export class Game {
       btnPauseFs.addEventListener('click', () => this.toggleFullscreen());
     }
 
+    const btnStartFs = document.getElementById('btn-start-fullscreen');
+    if (btnStartFs) {
+      btnStartFs.addEventListener('click', () => Game.enterFullscreen());
+    }
+
     document.addEventListener('fullscreenchange', () => this.updateFullscreenUI());
     document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenUI());
 
@@ -1264,11 +1272,11 @@ export class Game {
     }
   }
 
-  public toggleFullscreen(): void {
+  public static enterFullscreen(): void {
     const doc = document as any;
     const docEl = document.documentElement as any;
 
-    const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+    const isFullscreen = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
 
     if (!isFullscreen) {
       if (docEl.requestFullscreen) {
@@ -1278,15 +1286,12 @@ export class Game {
       } else if (docEl.msRequestFullscreen) {
         docEl.msRequestFullscreen();
       }
-    } else {
-      if (doc.exitFullscreen) {
-        doc.exitFullscreen().catch(() => {});
-      } else if (doc.webkitExitFullscreen) {
-        doc.webkitExitFullscreen();
-      } else if (doc.msExitFullscreen) {
-        doc.msExitFullscreen();
-      }
     }
+  }
+
+  public toggleFullscreen(): void {
+    // The game should never exit fullscreen mode in any case
+    Game.enterFullscreen();
   }
 
   private updateFullscreenUI(): void {
@@ -1307,7 +1312,16 @@ export class Game {
 
     const btnPauseFs = document.getElementById('btn-pause-fullscreen');
     if (btnPauseFs) {
-      btnPauseFs.textContent = isFullscreen ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+      btnPauseFs.textContent = 'FULLSCREEN';
+    }
+
+    const btnStartFs = document.getElementById('btn-start-fullscreen');
+    if (btnStartFs) {
+      if (isFullscreen) {
+        btnStartFs.classList.add('active');
+      } else {
+        btnStartFs.classList.remove('active');
+      }
     }
   }
 

@@ -207,24 +207,28 @@
         Take control of your chibi soldier, fire up your rocket boots, and battle through relentless waves of enemy militia bots on the classic 3D Outpost cliffs!
       </p>
       <div class="controls-preview-grid">
-        <div class="ctrl-col">
+        <div class="ctrl-col ctrl-desktop">
           <strong>DESKTOP</strong>
-          <div>W / Space: Jetpack Fly</div>
-          <div>A / D: Run Left / Right</div>
-          <div>Mouse: Aim & Shoot (Captured)</div>
-          <div>ESC: Pause / Release Cursor</div>
-          <div>G / Q: Grenade | F: Melee</div>
+          <div>WASD / Space: Move & Fly</div>
+          <div>Mouse: Aim & Fire (Locked)</div>
+          <div>ESC: Pause | G/Q: Grenade | F: Melee</div>
         </div>
-        <div class="ctrl-col">
-          <strong>MOBILE / TOUCH</strong>
-          <div>Left Stick: Move & Boost</div>
-          <div>Right Stick: Aim & Fire</div>
-          <div>Touch Buttons: Grenade, Melee</div>
+        <div class="ctrl-col ctrl-mobile">
+          <strong>TOUCH CONTROLS</strong>
+          <div>Left Stick: Move & Jetpack Boost</div>
+          <div>Right Stick: 360° Aim & Fire</div>
+          <div>Touch Buttons: Punch, Swap & Reload</div>
         </div>
       </div>
-      <button id="btn-start-game" class="btn-primary-action">
-        START MISSION
-      </button>
+      <div class="start-actions">
+        <button id="btn-start-fullscreen" class="btn-fullscreen-action" title="Enter Fullscreen Mode">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <span>FULLSCREEN</span>
+        </button>
+        <button id="btn-start-game" class="btn-primary-action">
+          START MISSION
+        </button>
+      </div>
     </div>
   </div>
 
