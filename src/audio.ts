@@ -1,57 +1,68 @@
-// Tiny Militia Web - Authentic Web Audio Sound Manager
+// Tiny Militia Web - Authentic Web Audio Sound Manager (TypeScript)
+
+export interface PlayOptions {
+  volume?: number;
+  detune?: number;
+  isVoice?: boolean;
+  pan?: number;
+}
+
+interface ActiveLoop {
+  source: AudioBufferSourceNode;
+  gainNode: GainNode;
+}
+
 class SoundManager {
-  constructor() {
-    this.ctx = null;
-    this.buffers = new Map();
-    this.activeLoops = new Map();
-    this.initialized = false;
-    this.masterGain = null;
-    this.sfxGain = null;
-    this.voiceGain = null;
+  private ctx: AudioContext | null = null;
+  private buffers: Map<string, AudioBuffer> = new Map();
+  private activeLoops: Map<string, ActiveLoop> = new Map();
+  private initialized: boolean = false;
+  private masterGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
+  private voiceGain: GainNode | null = null;
 
-    // List of key sound files to preload
-    this.soundManifest = {
-      // Weapons
-      ak47: '/audio/ak47.wav',
-      m16: '/audio/m16.wav',
-      deagle: '/audio/deagle.wav',
-      magnum: '/audio/magnum.wav',
-      shotgun: '/audio/shotgun.wav',
-      bolt: '/audio/bolt.wav',
-      rocket: '/audio/rocket.wav',
-      dryfire: '/audio/dryfire.wav',
-      reload: '/audio/reload.wav',
+  // List of key sound files to preload
+  public readonly soundManifest: Record<string, string> = {
+    // Weapons
+    ak47: '/audio/ak47.wav',
+    m16: '/audio/m16.wav',
+    deagle: '/audio/deagle.wav',
+    magnum: '/audio/magnum.wav',
+    shotgun: '/audio/shotgun.wav',
+    bolt: '/audio/bolt.wav',
+    rocket: '/audio/rocket.wav',
+    dryfire: '/audio/dryfire.wav',
+    reload: '/audio/reload.wav',
 
-      // Character & Movement
-      jet: '/audio/jet.wav',
-      boots: '/audio/boots.wav',
-      melee: '/audio/melee.wav',
-      throw: '/audio/throw.wav',
-      pickup: '/audio/pickup.wav',
-      ricochet: '/audio/ricochet.wav',
-      impact: '/audio/impact.wav',
-      explode: '/audio/explode.wav',
+    // Character & Movement
+    jet: '/audio/jet.wav',
+    boots: '/audio/boots.wav',
+    melee: '/audio/melee.wav',
+    throw: '/audio/throw.wav',
+    pickup: '/audio/pickup.wav',
+    ricochet: '/audio/ricochet.wav',
+    impact: '/audio/impact.wav',
+    explode: '/audio/explode.wav',
 
-      // Voice lines & Callouts
-      death1: '/audio/death1.wav',
-      death2: '/audio/death2.wav',
-      death3: '/audio/death3.wav',
-      death4: '/audio/death4.wav',
-      death5: '/audio/death5.wav',
-      cmonboy: '/audio/cmonboy.wav',
-      bringit: '/audio/bringit.wav',
-      hoorah: '/audio/hoorah.wav',
-      gotme: '/audio/gotme.wav',
-      coverme: '/audio/coverme.wav',
-      readyup: '/audio/readyup.wav'
-    };
-  }
+    // Voice lines & Callouts
+    death1: '/audio/death1.wav',
+    death2: '/audio/death2.wav',
+    death3: '/audio/death3.wav',
+    death4: '/audio/death4.wav',
+    death5: '/audio/death5.wav',
+    cmonboy: '/audio/cmonboy.wav',
+    bringit: '/audio/bringit.wav',
+    hoorah: '/audio/hoorah.wav',
+    gotme: '/audio/gotme.wav',
+    coverme: '/audio/coverme.wav',
+    readyup: '/audio/readyup.wav'
+  };
 
-  init() {
+  public init(): void {
     if (this.initialized) return;
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioContext();
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0.8;
       this.masterGain.connect(this.ctx.destination);
@@ -73,15 +84,15 @@ class SoundManager {
     }
   }
 
-  resume() {
+  public resume(): void {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
 
-  async loadSound(name, url) {
+  public async loadSound(name: string, url: string): Promise<AudioBuffer | null> {
     if (!this.ctx) return null;
-    if (this.buffers.has(name)) return this.buffers.get(name);
+    if (this.buffers.has(name)) return this.buffers.get(name)!;
 
     try {
       const response = await fetch(url);
@@ -95,7 +106,7 @@ class SoundManager {
     }
   }
 
-  async preloadAll() {
+  public async preloadAll(): Promise<void> {
     const promises = Object.entries(this.soundManifest).map(([name, url]) =>
       this.loadSound(name, url)
     );
@@ -103,8 +114,8 @@ class SoundManager {
     console.log(`Preloaded ${this.buffers.size} authentic sounds from APK!`);
   }
 
-  play(name, options = {}) {
-    if (!this.initialized || !this.ctx) return null;
+  public play(name: string, options: PlayOptions = {}): AudioBufferSourceNode | null {
+    if (!this.initialized || !this.ctx || !this.sfxGain || !this.voiceGain) return null;
     this.resume();
 
     const buffer = this.buffers.get(name);
@@ -114,30 +125,22 @@ class SoundManager {
     source.buffer = buffer;
 
     // Pitch variation for variety
-    const detune = options.detune || (Math.random() * 80 - 40);
+    const detune = options.detune ?? (Math.random() * 80 - 40);
     source.detune.value = detune;
 
     const gainNode = this.ctx.createGain();
-    const volume = (options.volume !== undefined ? options.volume : 1.0);
+    const volume = options.volume ?? 1.0;
     gainNode.gain.value = volume;
 
     // Spatial panning if pos provided relative to listener
-    let targetOutput = this.sfxGain;
-    if (options.isVoice) {
-      targetOutput = this.voiceGain;
-    }
+    let targetOutput: GainNode = options.isVoice ? this.voiceGain : this.sfxGain;
 
-    if (options.pan !== undefined) {
-      const panner = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
-      if (panner) {
-        panner.pan.value = Math.max(-1, Math.min(1, options.pan));
-        source.connect(gainNode);
-        gainNode.connect(panner);
-        panner.connect(targetOutput);
-      } else {
-        source.connect(gainNode);
-        gainNode.connect(targetOutput);
-      }
+    if (options.pan !== undefined && this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = Math.max(-1, Math.min(1, options.pan));
+      source.connect(gainNode);
+      gainNode.connect(panner);
+      panner.connect(targetOutput);
     } else {
       source.connect(gainNode);
       gainNode.connect(targetOutput);
@@ -147,20 +150,20 @@ class SoundManager {
     return source;
   }
 
-  playRandomDeath(pan = 0) {
+  public playRandomDeath(pan: number = 0): void {
     const deaths = ['death1', 'death2', 'death3', 'death4', 'death5'];
     const pick = deaths[Math.floor(Math.random() * deaths.length)];
     this.play(pick, { volume: 0.9, isVoice: true, pan });
   }
 
-  playRandomCallout(pan = 0) {
+  public playRandomCallout(pan: number = 0): void {
     const calls = ['cmonboy', 'bringit', 'hoorah', 'gotme', 'coverme'];
     const pick = calls[Math.floor(Math.random() * calls.length)];
     this.play(pick, { volume: 0.85, isVoice: true, pan });
   }
 
-  startLoop(name, id = 'default', volume = 0.5) {
-    if (!this.initialized || !this.ctx) return;
+  public startLoop(name: string, id: string = 'default', volume: number = 0.5): void {
+    if (!this.initialized || !this.ctx || !this.sfxGain) return;
     this.resume();
 
     const key = `${name}_${id}`;
@@ -184,7 +187,7 @@ class SoundManager {
     this.activeLoops.set(key, { source, gainNode });
   }
 
-  stopLoop(name, id = 'default') {
+  public stopLoop(name: string, id: string = 'default'): void {
     if (!this.ctx) return;
     const key = `${name}_${id}`;
     const active = this.activeLoops.get(key);

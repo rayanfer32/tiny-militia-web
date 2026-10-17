@@ -1,21 +1,46 @@
-// Tiny Militia Web - 3D Outpost Map Environment Builder (Three.js)
+// Tiny Militia Web - 3D Outpost Map Environment Builder (TypeScript)
 import * as THREE from 'three';
+import { PhysicsEngine, MapDataJson } from './physics.js';
 import { createPalmTree, createRock, createBarrel, createPickupItem } from './proceduralModels.js';
 
+export interface SpawnPoint {
+  name: string;
+  x: number;
+  y: number;
+}
+
+export interface WeaponSpawnPoint {
+  name: string;
+  x: number;
+  y: number;
+  weapon: string;
+}
+
+export interface CloudItem {
+  group: THREE.Group;
+  speed: number;
+}
+
 export class OutpostMap {
-  constructor(scene, physics) {
+  public scene: THREE.Scene;
+  public physics: PhysicsEngine;
+  public mapGroup: THREE.Group;
+
+  public spawns: SpawnPoint[] = [];
+  public weaponSpawns: WeaponSpawnPoint[] = [];
+  public barrels: THREE.Group[] = [];
+  public pickups: THREE.Group[] = [];
+  public clouds: CloudItem[] = [];
+
+  private rockMat: THREE.MeshToonMaterial;
+  private grassMat: THREE.MeshToonMaterial;
+
+  constructor(scene: THREE.Scene, physics: PhysicsEngine) {
     this.scene = scene;
     this.physics = physics;
     this.mapGroup = new THREE.Group();
     this.scene.add(this.mapGroup);
 
-    this.spawns = [];
-    this.weaponSpawns = [];
-    this.barrels = [];
-    this.pickups = [];
-    this.clouds = [];
-
-    // Materials
     this.rockMat = new THREE.MeshToonMaterial({
       color: 0x757f86,
       polygonOffset: true,
@@ -26,34 +51,23 @@ export class OutpostMap {
     this.grassMat = new THREE.MeshToonMaterial({
       color: 0x55a630
     });
-
-    this.bunkerMat = new THREE.MeshToonMaterial({
-      color: 0x5c677d
-    });
-
-    this.tunnelMat = new THREE.MeshToonMaterial({
-      color: 0x333533
-    });
   }
 
-  async load() {
+  public async load(): Promise<void> {
     try {
       const res = await fetch('/data/outpost.json');
-      const data = await res.json();
+      const data: MapDataJson = await res.json();
 
       this.physics.loadMapGeometry(data);
 
-      // Build 3D extruded terrain meshes
       this.buildTerrain(data.collision_polys);
 
-      // Extract spawn points
       this.spawns = data.spawns.map(s => ({
         name: s.name,
         x: this.physics.toWorldX(s.x),
         y: this.physics.toWorldY(s.y)
       }));
 
-      // Extract weapon spawns
       this.weaponSpawns = data.weapon_spawns.map(w => ({
         name: w.name,
         x: this.physics.toWorldX(w.x),
@@ -61,13 +75,8 @@ export class OutpostMap {
         weapon: w.weapon
       }));
 
-      // Build decorations (Palm trees, bushes, rocks)
-      this.buildDecorations(data.decorations);
-
-      // Build scenic background (mountains, ocean horizon, 3D clouds)
+      this.buildDecorations();
       this.buildScenery();
-
-      // Spawn initial weapon pickups and explosive barrels
       this.spawnInitialItems();
 
       console.log('3D Outpost environment created successfully!');
@@ -76,8 +85,8 @@ export class OutpostMap {
     }
   }
 
-  buildTerrain(polygons) {
-    const extrudeSettings = {
+  private buildTerrain(polygons: MapDataJson['collision_polys']): void {
+    const extrudeSettings: THREE.ExtrudeGeometryOptions = {
       depth: 3.5,
       bevelEnabled: true,
       bevelSegments: 2,
@@ -86,7 +95,7 @@ export class OutpostMap {
       bevelThickness: 0.15
     };
 
-    polygons.forEach((poly, polyIdx) => {
+    polygons.forEach((poly) => {
       if (poly.points.length < 3) return;
 
       const shape = new THREE.Shape();
@@ -102,9 +111,8 @@ export class OutpostMap {
       shape.closePath();
 
       const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-      geom.center(); // Center local anchor, then reposition
+      geom.center();
 
-      // Calculate centroid
       let cx = 0, cy = 0;
       for (const p of worldPts) {
         cx += p.x;
@@ -127,7 +135,6 @@ export class OutpostMap {
         const dy = p2.y - p1.y;
         const len = Math.hypot(dx, dy);
 
-        // If edge is roughly horizontal and facing upwards (top surface)
         if (dy / len < 0.35 && dx > 0) {
           const grassBoxGeo = new THREE.BoxGeometry(len, 0.45, 3.8);
           const grass = new THREE.Mesh(grassBoxGeo, this.grassMat);
@@ -135,7 +142,6 @@ export class OutpostMap {
           grass.rotation.z = Math.atan2(dy, dx);
           this.mapGroup.add(grass);
 
-          // Random tiny decorative rocks on grass
           if (Math.random() < 0.6 && len > 3) {
             const rock = createRock(0.4 + Math.random() * 0.4);
             rock.position.set(
@@ -150,8 +156,7 @@ export class OutpostMap {
     });
   }
 
-  buildDecorations(decorations) {
-    // Add palm trees at data points and key cliff tops
+  private buildDecorations(): void {
     const palmPositions = [
       { x: -28, y: 12 },
       { x: -14, y: 7 },
@@ -169,8 +174,7 @@ export class OutpostMap {
     });
   }
 
-  buildScenery() {
-    // 1. Distant rolling green hills/mountains (Parallax background)
+  private buildScenery(): void {
     const hillMat = new THREE.MeshToonMaterial({ color: 0x386641 });
     const distantHillMat = new THREE.MeshToonMaterial({ color: 0x2d6a4f, transparent: true, opacity: 0.85 });
 
@@ -182,7 +186,6 @@ export class OutpostMap {
       this.mapGroup.add(hill);
     }
 
-    // 2. 3D Low-Poly Floating Clouds
     const cloudMat = new THREE.MeshToonMaterial({
       color: 0xffffff,
       transparent: true,
@@ -217,8 +220,7 @@ export class OutpostMap {
     }
   }
 
-  spawnInitialItems() {
-    // Spawn explosive red barrels near covers and bridges
+  private spawnInitialItems(): void {
     const barrelLocations = [
       { x: -18, y: -4.5 },
       { x: -6, y: -6.0 },
@@ -233,7 +235,6 @@ export class OutpostMap {
       this.barrels.push(barrel);
     });
 
-    // Spawn authentic weapon & health drops at map weapon points
     this.weaponSpawns.forEach(w => {
       let pickType = 'ak47';
       const wList = w.weapon.toLowerCase();
@@ -251,8 +252,7 @@ export class OutpostMap {
     });
   }
 
-  update(dt) {
-    // Drifting clouds animation
+  public update(dt: number): void {
     for (const cloud of this.clouds) {
       cloud.group.position.x += cloud.speed * dt;
       if (cloud.group.position.x > 90) {
@@ -260,7 +260,6 @@ export class OutpostMap {
       }
     }
 
-    // Floating pickups bobbing and rotating
     for (const pickup of this.pickups) {
       pickup.userData.hoverTime += dt * 3;
       pickup.position.y = pickup.userData.startY + Math.sin(pickup.userData.hoverTime) * 0.15;
@@ -268,7 +267,7 @@ export class OutpostMap {
     }
   }
 
-  removePickup(pickup) {
+  public removePickup(pickup: THREE.Group): void {
     const idx = this.pickups.indexOf(pickup);
     if (idx !== -1) {
       this.scene.remove(pickup);
@@ -276,7 +275,7 @@ export class OutpostMap {
     }
   }
 
-  removeBarrel(barrel) {
+  public removeBarrel(barrel: THREE.Group): void {
     const idx = this.barrels.indexOf(barrel);
     if (idx !== -1) {
       this.scene.remove(barrel);

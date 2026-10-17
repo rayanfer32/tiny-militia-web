@@ -1,8 +1,8 @@
-// Tiny Militia Web - Stylized 3D Procedural Assets Generator (Three.js)
+// Tiny Militia Web - Stylized 3D Procedural Assets Generator (TypeScript)
 import * as THREE from 'three';
 
 // Stylized Materials Palette
-export const MATS = {
+export const MATS: Record<string, THREE.Material> = {
   soldierSkin: new THREE.MeshToonMaterial({ color: 0xe0a986 }),
   camoGreen: new THREE.MeshToonMaterial({ color: 0x4f772d }),
   camoDark: new THREE.MeshToonMaterial({ color: 0x31572c }),
@@ -14,7 +14,7 @@ export const MATS = {
   bootsBlack: new THREE.MeshToonMaterial({ color: 0x212529 }),
   jetpackMetal: new THREE.MeshToonMaterial({ color: 0x6c757d }),
   jetNozzle: new THREE.MeshToonMaterial({ color: 0x343a40 }),
-  
+
   // Weapons
   gunMetal: new THREE.MeshToonMaterial({ color: 0x2b2d42 }),
   gunWood: new THREE.MeshToonMaterial({ color: 0x8d5b4c }),
@@ -35,13 +35,31 @@ export const MATS = {
   boostBlue: new THREE.MeshToonMaterial({ color: 0x00b4d8 })
 };
 
+export interface SoldierModelOptions {
+  isBot?: boolean;
+  helmetColor?: 'red' | 'green' | 'beret' | string;
+}
+
+export interface SoldierModel {
+  root: THREE.Group;
+  armPivot: THREE.Group;
+  weaponMount: THREE.Group;
+  leftLeg: THREE.Group;
+  rightLeg: THREE.Group;
+  leftNozzle: THREE.Mesh;
+  rightNozzle: THREE.Mesh;
+  jetpackGroup: THREE.Group;
+  walkCycle: number;
+  animateWalk(speed: number, isFlying: boolean): void;
+}
+
 /**
  * Creates a cute 3D stylized soldier character matching the concept art
  */
-export function createSoldierModel(options = {}) {
+export function createSoldierModel(options: SoldierModelOptions = {}): SoldierModel {
   const isBot = !!options.isBot;
   const helmetColor = options.helmetColor || (isBot ? 'red' : 'green');
-  
+
   const group = new THREE.Group();
   group.name = isBot ? 'bot_soldier' : 'player_soldier';
 
@@ -68,21 +86,18 @@ export function createSoldierModel(options = {}) {
 
   // Helmet / Headwear
   if (helmetColor === 'red') {
-    // Red helmet (like enemies in concept art)
     const helmGeo = new THREE.SphereGeometry(0.42, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55);
     const helm = new THREE.Mesh(helmGeo, MATS.helmetRed);
     helm.position.y = 1.12;
     helm.rotation.x = -0.1;
     group.add(helm);
   } else if (helmetColor === 'beret') {
-    // Green beret (like Sarge / player in concept art)
     const beretGeo = new THREE.CylinderGeometry(0.44, 0.36, 0.18, 10);
     const beret = new THREE.Mesh(beretGeo, MATS.beretGreen);
     beret.position.set(0.04, 1.25, 0);
     beret.rotation.z = -0.25;
     group.add(beret);
   } else {
-    // Standard military helmet with rim
     const helmGeo = new THREE.SphereGeometry(0.42, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55);
     const helm = new THREE.Mesh(helmGeo, MATS.helmetGreen);
     helm.position.y = 1.12;
@@ -109,7 +124,6 @@ export function createSoldierModel(options = {}) {
   const jetBody = new THREE.Mesh(jetBodyGeo, MATS.jetpackMetal);
   jetpackGroup.add(jetBody);
 
-  // Left & Right thruster cylinders
   const nozzleGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.25, 8);
   const leftNozzle = new THREE.Mesh(nozzleGeo, MATS.jetNozzle);
   leftNozzle.position.set(-0.16, -0.28, 0);
@@ -122,16 +136,13 @@ export function createSoldierModel(options = {}) {
   group.add(jetpackGroup);
 
   // 4. Arms & Gun Pivot
-  // A dedicated pivot node at shoulder height that rotates towards aim direction
   const armPivot = new THREE.Group();
   armPivot.position.set(0, 0.72, 0);
 
-  // Weapon holder container
   const weaponMount = new THREE.Group();
   weaponMount.position.set(0.4, -0.05, 0.3);
   armPivot.add(weaponMount);
 
-  // Hands holding weapon
   const handGeo = new THREE.SphereGeometry(0.1, 8, 6);
   const rightHand = new THREE.Mesh(handGeo, MATS.soldierSkin);
   rightHand.position.set(0.35, -0.05, 0.2);
@@ -170,20 +181,18 @@ export function createSoldierModel(options = {}) {
     leftNozzle,
     rightNozzle,
     jetpackGroup,
-    // Animation helpers
     walkCycle: 0,
-    animateWalk(speed, isFlying) {
+    animateWalk(speed: number, isFlying: boolean) {
       if (isFlying) {
-        // Legs tucked back during jetpack flight
-        leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, 0.6, 0.15);
-        rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0.4, 0.15);
+        this.leftLeg.rotation.x = THREE.MathUtils.lerp(this.leftLeg.rotation.x, 0.6, 0.15);
+        this.rightLeg.rotation.x = THREE.MathUtils.lerp(this.rightLeg.rotation.x, 0.4, 0.15);
       } else if (Math.abs(speed) > 0.1) {
         this.walkCycle += Math.abs(speed) * 0.2;
-        leftLeg.rotation.x = Math.sin(this.walkCycle) * 0.7;
-        rightLeg.rotation.x = -Math.sin(this.walkCycle) * 0.7;
+        this.leftLeg.rotation.x = Math.sin(this.walkCycle) * 0.7;
+        this.rightLeg.rotation.x = -Math.sin(this.walkCycle) * 0.7;
       } else {
-        leftLeg.rotation.x = THREE.MathUtils.lerp(leftLeg.rotation.x, 0, 0.2);
-        rightLeg.rotation.x = THREE.MathUtils.lerp(rightLeg.rotation.x, 0, 0.2);
+        this.leftLeg.rotation.x = THREE.MathUtils.lerp(this.leftLeg.rotation.x, 0, 0.2);
+        this.rightLeg.rotation.x = THREE.MathUtils.lerp(this.rightLeg.rotation.x, 0, 0.2);
       }
     }
   };
@@ -192,39 +201,33 @@ export function createSoldierModel(options = {}) {
 /**
  * Creates 3D procedural weapon meshes
  */
-export function createWeaponMesh(weaponId) {
+export function createWeaponMesh(weaponId: string): THREE.Group {
   const group = new THREE.Group();
   group.name = `weapon_${weaponId}`;
 
   switch (weaponId) {
     case 'ak47': {
-      // Main receiver
       const rec = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.08), MATS.gunMetal);
       group.add(rec);
 
-      // Wooden stock
       const stock = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.07), MATS.gunWood);
       stock.position.set(-0.35, -0.03, 0);
       group.add(stock);
 
-      // Wooden handguard
       const hand = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.1, 0.075), MATS.gunWood);
       hand.position.set(0.3, 0, 0);
       group.add(hand);
 
-      // Long metal barrel
       const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.45, 6), MATS.gunMetal);
       barrel.rotation.z = -Math.PI / 2;
       barrel.position.set(0.55, 0.02, 0);
       group.add(barrel);
 
-      // Curved banana magazine
       const mag = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.25, 0.06), MATS.gunMag);
       mag.position.set(0.08, -0.16, 0);
       mag.rotation.z = -0.25;
       group.add(mag);
 
-      // Muzzle point for bullet ejection
       const muzzle = new THREE.Object3D();
       muzzle.position.set(0.8, 0.02, 0);
       group.add(muzzle);
@@ -232,7 +235,6 @@ export function createWeaponMesh(weaponId) {
       break;
     }
     case 'm16': {
-      // Sleek tactical assault rifle
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.14, 0.08), MATS.gunMetal);
       group.add(body);
 
@@ -240,7 +242,6 @@ export function createWeaponMesh(weaponId) {
       stock.position.set(-0.4, -0.02, 0);
       group.add(stock);
 
-      // Carry handle / top sight
       const sight = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.05), MATS.gunMetal);
       sight.position.set(0, 0.1, 0);
       group.add(sight);
@@ -261,7 +262,6 @@ export function createWeaponMesh(weaponId) {
       break;
     }
     case 'shotgun': {
-      // Pump-action shotgun
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.14, 0.09), MATS.gunMetal);
       group.add(body);
 
@@ -287,7 +287,6 @@ export function createWeaponMesh(weaponId) {
     }
     case 'magnum':
     case 'deagle': {
-      // Heavy handgun / revolver
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.08), MATS.gunMetal);
       group.add(frame);
 
@@ -307,7 +306,6 @@ export function createWeaponMesh(weaponId) {
       break;
     }
     case 'sniper': {
-      // Long bolt action sniper rifle with optical scope
       const body = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.12, 0.08), MATS.gunMetal);
       group.add(body);
 
@@ -320,7 +318,6 @@ export function createWeaponMesh(weaponId) {
       barrel.position.set(0.7, 0.02, 0);
       group.add(barrel);
 
-      // Scope
       const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.35, 8), MATS.gunMetal);
       scope.rotation.z = -Math.PI / 2;
       scope.position.set(0.05, 0.14, 0);
@@ -333,7 +330,6 @@ export function createWeaponMesh(weaponId) {
       break;
     }
     case 'rocket': {
-      // Big shoulder rocket launcher tube
       const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 1.1, 10), MATS.rocketBody);
       tube.rotation.z = -Math.PI / 2;
       group.add(tube);
@@ -361,10 +357,9 @@ export function createWeaponMesh(weaponId) {
 /**
  * Creates 3D stylized palm tree matching the concept art
  */
-export function createPalmTree() {
+export function createPalmTree(): THREE.Group {
   const tree = new THREE.Group();
 
-  // Curved segmented trunk
   const trunkSegments = 5;
   const height = 4.2;
   const curveAngle = (Math.random() - 0.5) * 0.4;
@@ -386,7 +381,6 @@ export function createPalmTree() {
     currentX += Math.sin(curveAngle) * 0.3;
   }
 
-  // Palm fronds (leaves spreading out)
   const leafCount = 7;
   const leafGroup = new THREE.Group();
   leafGroup.position.set(currentX, currentY, 0);
@@ -410,9 +404,8 @@ export function createPalmTree() {
 /**
  * Creates 3D stylized low-poly rock boulder
  */
-export function createRock(scale = 1.0) {
+export function createRock(scale: number = 1.0): THREE.Mesh {
   const geo = new THREE.DodecahedronGeometry(0.8 * scale, 1);
-  // Deform slightly for natural organic low-poly feel
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     pos.setXYZ(
@@ -433,7 +426,7 @@ export function createRock(scale = 1.0) {
 /**
  * Creates 3D explosive barrel
  */
-export function createBarrel(x, y) {
+export function createBarrel(x: number, y: number): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, y, 0);
 
@@ -441,7 +434,6 @@ export function createBarrel(x, y) {
   const barrel = new THREE.Mesh(barrelGeo, MATS.barrelRed);
   group.add(barrel);
 
-  // Metal rings around barrel
   const ringGeo = new THREE.TorusGeometry(0.41, 0.03, 6, 12);
   const ring1 = new THREE.Mesh(ringGeo, MATS.jetNozzle);
   ring1.rotation.x = Math.PI / 2;
@@ -464,7 +456,7 @@ export function createBarrel(x, y) {
 /**
  * Creates 3D floating pickup item (Health pack, Jetpack boost, or Weapon)
  */
-export function createPickupItem(type, x, y) {
+export function createPickupItem(type: string, x: number, y: number): THREE.Group {
   const group = new THREE.Group();
   group.position.set(x, y, 0);
 
@@ -480,13 +472,11 @@ export function createPickupItem(type, x, y) {
     const canister = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.55, 8), MATS.boostBlue);
     group.add(canister);
   } else {
-    // Weapon pickup
     const wepMesh = createWeaponMesh(type);
     wepMesh.scale.set(1.1, 1.1, 1.1);
     group.add(wepMesh);
   }
 
-  // Floating glow ring underneath
   const ringGeo = new THREE.RingGeometry(0.35, 0.45, 16);
   const ringMat = new THREE.MeshBasicMaterial({
     color: type === 'healthpack' ? 0xff4d8d : (type === 'boosttank' ? 0x00f5d4 : 0xffbe0b),

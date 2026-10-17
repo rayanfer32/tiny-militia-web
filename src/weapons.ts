@@ -1,11 +1,36 @@
-// Tiny Militia Web - Weapons Definitions and Balancing
-export const WEAPON_TYPES = {
+// Tiny Militia Web - Weapons Definitions and Balancing (TypeScript)
+
+export type WeaponType = 'auto' | 'burst' | 'semi';
+
+export interface WeaponDef {
+  id: string;
+  name: string;
+  type: WeaponType;
+  damage: number;
+  fireRate: number; // seconds between shots
+  bulletSpeed: number;
+  spread: number;
+  pellets: number;
+  clipSize: number;
+  maxReserve: number;
+  reloadTime: number;
+  sound: string;
+  color: string;
+  trailColor: string;
+  blastRadius?: number;
+  burstCount?: number;
+  burstInterval?: number;
+  isRocket?: boolean;
+  laserSight?: boolean;
+}
+
+export const WEAPON_TYPES: Record<string, WeaponDef> = {
   ak47: {
     id: 'ak47',
     name: 'AK-47',
     type: 'auto',
     damage: 24,
-    fireRate: 0.11, // seconds between shots
+    fireRate: 0.11,
     bulletSpeed: 46,
     spread: 0.045,
     pellets: 1,
@@ -38,7 +63,7 @@ export const WEAPON_TYPES = {
     id: 'shotgun',
     name: 'Pump Shotgun',
     type: 'semi',
-    damage: 18, // per pellet
+    damage: 18,
     fireRate: 0.65,
     bulletSpeed: 40,
     spread: 0.2,
@@ -120,27 +145,31 @@ export const WEAPON_TYPES = {
 };
 
 export class WeaponInstance {
-  constructor(typeKey) {
+  public def: WeaponDef;
+  public ammoInClip: number;
+  public reserveAmmo: number;
+  public lastShotTime: number = 0;
+  public isReloading: boolean = false;
+  public reloadProgress: number = 0;
+
+  constructor(typeKey: string) {
     this.def = WEAPON_TYPES[typeKey] || WEAPON_TYPES.ak47;
     this.ammoInClip = this.def.clipSize;
     this.reserveAmmo = this.def.maxReserve;
-    this.lastShotTime = 0;
-    this.isReloading = false;
-    this.reloadProgress = 0;
   }
 
-  canShoot(now) {
+  public canShoot(now: number): boolean {
     if (this.isReloading) return false;
     if (this.ammoInClip <= 0) return false;
     return (now - this.lastShotTime) >= this.def.fireRate;
   }
 
-  consumeAmmo(now) {
+  public consumeAmmo(now: number): void {
     this.ammoInClip--;
     this.lastShotTime = now;
   }
 
-  startReload() {
+  public startReload(): void {
     if (this.isReloading) return;
     if (this.ammoInClip >= this.def.clipSize) return;
     if (this.reserveAmmo <= 0) return;
@@ -148,7 +177,7 @@ export class WeaponInstance {
     this.reloadProgress = 0;
   }
 
-  update(dt) {
+  public update(dt: number): void {
     if (this.isReloading) {
       this.reloadProgress += dt;
       if (this.reloadProgress >= this.def.reloadTime) {

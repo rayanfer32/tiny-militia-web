@@ -1,13 +1,45 @@
-// Tiny Militia Web - 3D Particle System for Visual Effects (Three.js)
+// Tiny Militia Web - 3D Particle System for Visual Effects (TypeScript)
 import * as THREE from 'three';
 
-export class ParticleSystem {
-  constructor(scene) {
-    this.scene = scene;
-    this.particles = [];
-    this.shockwaves = [];
+export interface Particle {
+  mesh: THREE.Mesh;
+  vx: number;
+  vy: number;
+  vz: number;
+  life: number;
+  maxLife: number;
+  startScale: number;
+  endScale: number;
+  gravity?: number;
+}
 
-    // Reusable geometries & materials for efficiency
+export interface Shockwave {
+  mesh: THREE.Mesh;
+  life: number;
+  maxLife: number;
+  startScale: number;
+  endScale: number;
+}
+
+export class ParticleSystem {
+  public scene: THREE.Scene;
+  public particles: Particle[] = [];
+  public shockwaves: Shockwave[] = [];
+  public group: THREE.Group;
+
+  private smokeGeo: THREE.DodecahedronGeometry;
+  private sparkGeo: THREE.BoxGeometry;
+  private flameGeo: THREE.SphereGeometry;
+  private ringGeo: THREE.RingGeometry;
+
+  private smokeMat: THREE.MeshBasicMaterial;
+  private flameMat: THREE.MeshBasicMaterial;
+  private sparkMat: THREE.MeshBasicMaterial;
+  private bloodMat: THREE.MeshBasicMaterial;
+
+  constructor(scene: THREE.Scene) {
+    this.scene = scene;
+
     this.smokeGeo = new THREE.DodecahedronGeometry(0.18, 1);
     this.sparkGeo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
     this.flameGeo = new THREE.SphereGeometry(0.12, 6, 6);
@@ -33,12 +65,11 @@ export class ParticleSystem {
       color: 0xc1121f
     });
 
-    // Instanced or pooled particle group
     this.group = new THREE.Group();
     this.scene.add(this.group);
   }
 
-  emitJetpackFlame(x, y, z, dirX = 0, dirY = -1) {
+  public emitJetpackFlame(x: number, y: number, z: number, dirX: number = 0, dirY: number = -1): void {
     for (let i = 0; i < 2; i++) {
       const mesh = new THREE.Mesh(this.flameGeo, this.flameMat.clone());
       mesh.position.set(
@@ -64,7 +95,6 @@ export class ParticleSystem {
       });
     }
 
-    // Occasional smoke puff
     if (Math.random() < 0.3) {
       const sMesh = new THREE.Mesh(this.smokeGeo, this.smokeMat.clone());
       sMesh.position.set(x, y - 0.2, z);
@@ -82,7 +112,7 @@ export class ParticleSystem {
     }
   }
 
-  emitMuzzleFlash(x, y, z, angle) {
+  public emitMuzzleFlash(x: number, y: number, z: number, angle: number): void {
     const flashMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
     const flash = new THREE.Mesh(this.smokeGeo, flashMat);
     flash.position.set(x, y, z);
@@ -102,8 +132,7 @@ export class ParticleSystem {
     });
   }
 
-  emitBulletImpact(x, y, z, normalX = 0, normalY = 1) {
-    // Sparks
+  public emitBulletImpact(x: number, y: number, z: number, normalX: number = 0, normalY: number = 1): void {
     for (let i = 0; i < 6; i++) {
       const spark = new THREE.Mesh(this.sparkGeo, this.sparkMat.clone());
       spark.position.set(x, y, z);
@@ -124,7 +153,6 @@ export class ParticleSystem {
       });
     }
 
-    // Dust puff
     const dust = new THREE.Mesh(this.smokeGeo, this.smokeMat.clone());
     dust.position.set(x, y, z);
     this.group.add(dust);
@@ -140,7 +168,7 @@ export class ParticleSystem {
     });
   }
 
-  emitBloodSplatter(x, y, z) {
+  public emitBloodSplatter(x: number, y: number, z: number): void {
     for (let i = 0; i < 8; i++) {
       const drop = new THREE.Mesh(this.sparkGeo, this.bloodMat.clone());
       drop.position.set(x, y, z);
@@ -160,8 +188,7 @@ export class ParticleSystem {
     }
   }
 
-  emitExplosion(x, y, z, scale = 1.0) {
-    // 1. Central fireball burst
+  public emitExplosion(x: number, y: number, z: number, scale: number = 1.0): void {
     for (let i = 0; i < 16; i++) {
       const flame = new THREE.Mesh(this.smokeGeo, this.flameMat.clone());
       flame.position.set(x, y, z);
@@ -181,7 +208,6 @@ export class ParticleSystem {
       });
     }
 
-    // 2. Heavy billowing dark smoke puffs
     for (let i = 0; i < 12; i++) {
       const smokeMat = new THREE.MeshBasicMaterial({
         color: 0x444444,
@@ -206,7 +232,6 @@ export class ParticleSystem {
       });
     }
 
-    // 3. Expanding shockwave ring
     const shockMat = new THREE.MeshBasicMaterial({
       color: 0xffe6a7,
       transparent: true,
@@ -226,21 +251,23 @@ export class ParticleSystem {
     });
   }
 
-  update(dt) {
-    // Update regular particles
+  public update(dt: number): void {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt;
 
       if (p.life <= 0) {
         this.group.remove(p.mesh);
-        if (p.mesh.geometry) p.mesh.geometry.dispose();
-        if (p.mesh.material) p.mesh.material.dispose();
+        p.mesh.geometry?.dispose();
+        if (Array.isArray(p.mesh.material)) {
+          p.mesh.material.forEach(m => m.dispose());
+        } else {
+          p.mesh.material?.dispose();
+        }
         this.particles.splice(i, 1);
         continue;
       }
 
-      // Physics
       p.mesh.position.x += p.vx * dt;
       p.mesh.position.y += p.vy * dt;
       p.mesh.position.z += (p.vz || 0) * dt;
@@ -249,25 +276,28 @@ export class ParticleSystem {
         p.vy += p.gravity * dt;
       }
 
-      // Scale & Opacity lerp
       const progress = 1 - (p.life / p.maxLife);
       const scale = THREE.MathUtils.lerp(p.startScale, p.endScale, progress);
       p.mesh.scale.set(scale, scale, scale);
 
-      if (p.mesh.material && p.mesh.material.transparent) {
-        p.mesh.material.opacity = Math.max(0, 1 - progress);
+      const mat = p.mesh.material as THREE.Material;
+      if (mat && 'opacity' in mat) {
+        (mat as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - progress);
       }
     }
 
-    // Update shockwaves
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
       const s = this.shockwaves[i];
       s.life -= dt;
 
       if (s.life <= 0) {
         this.group.remove(s.mesh);
-        if (s.mesh.geometry) s.mesh.geometry.dispose();
-        if (s.mesh.material) s.mesh.material.dispose();
+        s.mesh.geometry?.dispose();
+        if (Array.isArray(s.mesh.material)) {
+          s.mesh.material.forEach(m => m.dispose());
+        } else {
+          s.mesh.material?.dispose();
+        }
         this.shockwaves.splice(i, 1);
         continue;
       }
@@ -275,7 +305,10 @@ export class ParticleSystem {
       const progress = 1 - (s.life / s.maxLife);
       const scale = THREE.MathUtils.lerp(s.startScale, s.endScale, Math.pow(progress, 0.6));
       s.mesh.scale.set(scale, scale, 1);
-      s.mesh.material.opacity = Math.max(0, (1 - progress) * 0.85);
+      const mat = s.mesh.material as THREE.MeshBasicMaterial;
+      if (mat) {
+        mat.opacity = Math.max(0, (1 - progress) * 0.85);
+      }
     }
   }
 }

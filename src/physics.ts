@@ -1,29 +1,63 @@
-// Tiny Militia Web - 2.5D Swept Collision & Raycasting Physics Engine
-export class PhysicsEngine {
-  constructor() {
-    this.segments = []; // All line segments from collision polygons
-    this.polygons = []; // Raw polygon point arrays
-    this.scale = 0.045; // Pixel to World coordinate scale
-    this.mapPixelWidth = 3328;
-    this.mapPixelHeight = 1152;
-  }
+// Tiny Militia Web - 2.5D Swept Collision & Raycasting Physics Engine (TypeScript)
 
-  toWorldX(px) {
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export interface CollisionSegment {
+  p1: Point2D;
+  p2: Point2D;
+  dx: number;
+  dy: number;
+  len: number;
+  nx: number;
+  ny: number;
+}
+
+export interface RaycastHit {
+  x: number;
+  y: number;
+  dist: number;
+  nx: number;
+  ny: number;
+}
+
+export interface MapDataJson {
+  width?: number;
+  height?: number;
+  collision_polys: Array<{
+    id: string;
+    points: [number, number][];
+  }>;
+  spawns: Array<{ name: string; x: number; y: number }>;
+  weapon_spawns: Array<{ name: string; x: number; y: number; weapon: string }>;
+  decorations: Array<{ type: string; x: number; y: number }>;
+}
+
+export class PhysicsEngine {
+  public segments: CollisionSegment[] = [];
+  public polygons: Point2D[][] = [];
+  public scale: number = 0.045;
+  public mapPixelWidth: number = 3328;
+  public mapPixelHeight: number = 1152;
+
+  public toWorldX(px: number): number {
     return (px - this.mapPixelWidth / 2) * this.scale;
   }
 
-  toWorldY(py) {
+  public toWorldY(py: number): number {
     return (this.mapPixelHeight / 2 - py) * this.scale;
   }
 
-  loadMapGeometry(mapData) {
+  public loadMapGeometry(mapData: MapDataJson): void {
     this.segments = [];
     this.polygons = [];
     this.mapPixelWidth = mapData.width || 3328;
     this.mapPixelHeight = mapData.height || 1152;
 
     for (const poly of mapData.collision_polys) {
-      const worldPts = poly.points.map(pt => ({
+      const worldPts: Point2D[] = poly.points.map(pt => ({
         x: this.toWorldX(pt[0]),
         y: this.toWorldY(pt[1])
       }));
@@ -38,7 +72,6 @@ export class PhysicsEngine {
         const dy = p2.y - p1.y;
         const len = Math.hypot(dx, dy);
         if (len > 0.001) {
-          // Normal pointing outwards (assuming CW or CCW order)
           this.segments.push({
             p1,
             p2,
@@ -55,7 +88,7 @@ export class PhysicsEngine {
     // Add map boundary walls so players/bullets don't escape outside
     const hw = (this.mapPixelWidth / 2) * this.scale + 2;
     const hh = (this.mapPixelHeight / 2) * this.scale + 2;
-    const bounds = [
+    const bounds: [Point2D, Point2D][] = [
       [{ x: -hw, y: -hh }, { x: hw, y: -hh }], // bottom
       [{ x: hw, y: -hh }, { x: hw, y: hh }],   // right
       [{ x: hw, y: hh }, { x: -hw, y: hh }],   // top
@@ -80,7 +113,7 @@ export class PhysicsEngine {
   }
 
   // Resolve circle vs segments collision
-  resolveCircle(pos, radius, vel = null) {
+  public resolveCircle(pos: Point2D, radius: number, vel: Point2D | null = null): boolean {
     let onGround = false;
     const iterations = 3;
 
@@ -88,7 +121,6 @@ export class PhysicsEngine {
       let collided = false;
 
       for (const seg of this.segments) {
-        // Find closest point on segment to circle center
         const vx = pos.x - seg.p1.x;
         const vy = pos.y - seg.p1.y;
         const t = Math.max(0, Math.min(1, (vx * seg.dx + vy * seg.dy) / (seg.len * seg.len)));
@@ -111,7 +143,6 @@ export class PhysicsEngine {
           }
 
           if (vel) {
-            // Cancel velocity into wall
             const dot = vel.x * nx + vel.y * ny;
             if (dot < 0) {
               vel.x -= dot * nx * 1.1; // small bounce
@@ -129,13 +160,13 @@ export class PhysicsEngine {
   }
 
   // Raycast against all collision segments
-  raycast(startX, startY, endX, endY) {
+  public raycast(startX: number, startY: number, endX: number, endY: number): RaycastHit | null {
     const rx = endX - startX;
     const ry = endY - startY;
     const rLen = Math.hypot(rx, ry);
     if (rLen <= 0.0001) return null;
 
-    let closestHit = null;
+    let closestHit: RaycastHit | null = null;
     let minT = 1.0;
 
     for (const seg of this.segments) {

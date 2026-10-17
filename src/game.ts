@@ -1,18 +1,99 @@
-// Tiny Militia Web - Core Game Engine & Wave Survival Manager
+// Tiny Militia Web - Core Game Engine & Wave Survival Manager (TypeScript)
 import * as THREE from 'three';
-import { PhysicsEngine } from './physics.js';
+import { PhysicsEngine, Point2D } from './physics.js';
 import { OutpostMap } from './map.js';
 import { ParticleSystem } from './particles.js';
-import { createSoldierModel, createWeaponMesh } from './proceduralModels.js';
+import { SoldierModel, createSoldierModel, createWeaponMesh } from './proceduralModels.js';
 import { WeaponInstance, WEAPON_TYPES } from './weapons.js';
-import { Bot } from './bot.js';
+import { Bot, BulletSpawnOptions } from './bot.js';
 import { sounds } from './audio.js';
 
+export interface PlayerEntity {
+  pos: Point2D;
+  vel: Point2D;
+  radius: number;
+  onGround: boolean;
+  facingRight: boolean;
+  aimAngle: number;
+  health: number;
+  maxHealth: number;
+  jetpackFuel: number;
+  maxFuel: number;
+  isBoosting: boolean;
+  grenades: number;
+  weapon: WeaponInstance;
+  secondaryWeapon: WeaponInstance;
+  model: SoldierModel;
+  weaponMesh: THREE.Group;
+  takeDamage(amount: number, attacker: string): void;
+}
+
+export interface BulletEntity {
+  mesh: THREE.Mesh;
+  owner: 'player' | 'bot';
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  damage: number;
+  isRocket: boolean;
+  life: number;
+}
+
+export interface GrenadeEntity {
+  mesh: THREE.Mesh;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  fuse: number;
+  radius: number;
+}
+
+export interface JoystickState {
+  active: boolean;
+  x: number;
+  y: number;
+}
+
 export class Game {
-  constructor(canvas) {
+  public canvas: HTMLCanvasElement;
+  public scene: THREE.Scene;
+  public camera: THREE.PerspectiveCamera;
+  public renderer: THREE.WebGLRenderer;
+
+  public physics: PhysicsEngine;
+  public particles: ParticleSystem;
+  public map: OutpostMap;
+
+  public player: PlayerEntity | null = null;
+  public bots: Bot[] = [];
+  public bullets: BulletEntity[] = [];
+  public grenades: GrenadeEntity[] = [];
+
+  public wave: number = 1;
+  public score: number = 0;
+  public kills: number = 0;
+  public matchTime: number = 300;
+  public isGameOver: boolean = false;
+  public isPaused: boolean = false;
+  public waveInProgress: boolean = false;
+
+  public screenShake: number = 0;
+  public camTarget: THREE.Vector3 = new THREE.Vector3(0, 0, 32);
+
+  public keys: Record<string, boolean> = {};
+  public mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
+  public joysticks: { move: JoystickState; aim: JoystickState } = {
+    move: { active: false, x: 0, y: 0 },
+    aim: { active: false, x: 0, y: 0 }
+  };
+
+  private lastTime: number = 0;
+
+  constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
 
-    // Three.js Core
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x70b4e0);
     this.scene.fog = new THREE.FogExp2(0x70b4e0, 0.008);
@@ -30,50 +111,20 @@ export class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Systems
     this.physics = new PhysicsEngine();
     this.particles = new ParticleSystem(this.scene);
     this.map = new OutpostMap(this.scene, this.physics);
-
-    // Player State
-    this.player = null;
-    this.bots = [];
-    this.bullets = [];
-    this.grenades = [];
-
-    // Survival Mode Progression
-    this.wave = 1;
-    this.score = 0;
-    this.kills = 0;
-    this.matchTime = 300; // 5 minute countdown
-    this.isGameOver = false;
-    this.isPaused = false;
-    this.waveInProgress = false;
-
-    // Camera & Screen Shake
-    this.screenShake = 0;
-    this.camTarget = new THREE.Vector3(0, 0, 32);
-
-    // Inputs
-    this.keys = {};
-    this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
-    this.joysticks = {
-      move: { active: false, x: 0, y: 0 },
-      aim: { active: false, x: 0, y: 0 }
-    };
 
     this.initLights();
     this.setupEventListeners();
     this.setupHUD();
   }
 
-  initLights() {
-    // Ambient / Sky light
+  private initLights(): void {
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 0.95);
     hemiLight.position.set(0, 50, 0);
     this.scene.add(hemiLight);
 
-    // Warm Directional Sunlight
     const sun = new THREE.DirectionalLight(0xfff3b0, 1.4);
     sun.position.set(20, 35, 25);
     sun.castShadow = true;
@@ -89,7 +140,7 @@ export class Game {
     this.scene.add(sun);
   }
 
-  async start() {
+  public async start(): Promise<void> {
     sounds.init();
     await this.map.load();
 
@@ -104,8 +155,7 @@ export class Game {
     requestAnimationFrame(this.animate);
   }
 
-  spawnPlayer() {
-    // Pick spawn from map data or default center
+  private spawnPlayer(): void {
     let spawnX = 0, spawnY = 4;
     if (this.map.spawns.length > 0) {
       const sp = this.map.spawns[0];
@@ -134,8 +184,8 @@ export class Game {
       model: createSoldierModel({ isBot: false, helmetColor: 'beret' }),
       weaponMesh: createWeaponMesh('ak47'),
 
-      takeDamage: (amount, attacker) => {
-        if (this.isGameOver) return;
+      takeDamage: (amount: number, _attacker: string) => {
+        if (this.isGameOver || !this.player) return;
         this.player.health = Math.max(0, this.player.health - amount);
         this.particles.emitBloodSplatter(this.player.pos.x, this.player.pos.y + 0.6, 0);
         this.addScreenShake(0.3);
@@ -152,20 +202,17 @@ export class Game {
     this.scene.add(this.player.model.root);
   }
 
-  startWave(waveNum) {
+  public startWave(waveNum: number): void {
     this.wave = waveNum;
     this.waveInProgress = true;
     this.updateHUD();
 
-    // Show Wave Banner
     this.showBanner(`WAVE ${this.wave}`, `INCOMING ${this.wave * 2 + 1} ENEMY MILITIA BOTS!`);
 
-    // Sarge Voice Callout
     if (this.wave > 1) {
       this.showSargeCallout("Wave cleared! More hostiles coming in hot!", 'bringit');
     }
 
-    // Spawn wave bots
     const botCount = 2 + waveNum * 2;
     for (let i = 0; i < botCount; i++) {
       setTimeout(() => {
@@ -186,7 +233,7 @@ export class Game {
     }
   }
 
-  showBanner(title, desc) {
+  public showBanner(title: string, desc: string): void {
     const banner = document.getElementById('event-banner');
     const tElem = document.getElementById('banner-title');
     const dElem = document.getElementById('banner-desc');
@@ -201,7 +248,7 @@ export class Game {
     }, 2800);
   }
 
-  showSargeCallout(text, soundKey = 'cmonboy') {
+  public showSargeCallout(text: string, soundKey: string = 'cmonboy'): void {
     const sarge = document.getElementById('sarge-box');
     const txt = document.getElementById('sarge-text');
     if (sarge && txt) {
@@ -215,7 +262,7 @@ export class Game {
     }
   }
 
-  addKillfeed(killer, victim, weaponName) {
+  public addKillfeed(killer: string, victim: string, weaponName: string): void {
     const feed = document.getElementById('killfeed');
     if (!feed) return;
 
@@ -229,13 +276,13 @@ export class Game {
     }, 4000);
   }
 
-  addScreenShake(intensity = 0.4) {
+  public addScreenShake(intensity: number = 0.4): void {
     this.screenShake = Math.min(1.2, this.screenShake + intensity);
   }
 
-  spawnBullet(opts) {
+  public spawnBullet(opts: BulletSpawnOptions): void {
     const isRocket = !!opts.isRocket;
-    let mesh;
+    let mesh: THREE.Mesh;
 
     if (isRocket) {
       mesh = new THREE.Mesh(
@@ -267,8 +314,8 @@ export class Game {
     });
   }
 
-  throwGrenade(startX, startY, angle, power = 18) {
-    if (this.player.grenades <= 0) return;
+  public throwGrenade(startX: number, startY: number, angle: number, power: number = 18): void {
+    if (!this.player || this.player.grenades <= 0) return;
     this.player.grenades--;
     this.updateHUD();
 
@@ -291,23 +338,22 @@ export class Game {
     });
   }
 
-  triggerExplosion(x, y, radius = 4.2, maxDamage = 130) {
+  public triggerExplosion(x: number, y: number, radius: number = 4.2, maxDamage: number = 130): void {
     sounds.play('explode', { volume: 1.0 });
     this.particles.emitExplosion(x, y, 0, radius / 3.5);
     this.addScreenShake(0.85);
 
-    // Damage Player if in blast radius
-    const pDist = Math.hypot(this.player.pos.x - x, this.player.pos.y - y);
-    if (pDist < radius) {
-      const dmg = Math.round(maxDamage * (1 - pDist / radius));
-      this.player.takeDamage(dmg, 'Explosion');
-      // Knockback
-      const angle = Math.atan2(this.player.pos.y - y, this.player.pos.x - x);
-      this.player.vel.x += Math.cos(angle) * 18;
-      this.player.vel.y += Math.sin(angle) * 18;
+    if (this.player) {
+      const pDist = Math.hypot(this.player.pos.x - x, this.player.pos.y - y);
+      if (pDist < radius) {
+        const dmg = Math.round(maxDamage * (1 - pDist / radius));
+        this.player.takeDamage(dmg, 'Explosion');
+        const angle = Math.atan2(this.player.pos.y - y, this.player.pos.x - x);
+        this.player.vel.x += Math.cos(angle) * 18;
+        this.player.vel.y += Math.sin(angle) * 18;
+      }
     }
 
-    // Damage Bots in radius
     for (const bot of this.bots) {
       if (bot.isDead) continue;
       const bDist = Math.hypot(bot.pos.x - x, bot.pos.y - y);
@@ -320,7 +366,6 @@ export class Game {
       }
     }
 
-    // Damage and trigger chain reactions on Barrels
     for (let i = this.map.barrels.length - 1; i >= 0; i--) {
       const b = this.map.barrels[i];
       const dist = Math.hypot(b.position.x - x, b.position.y - y);
@@ -336,13 +381,12 @@ export class Game {
     }
   }
 
-  onBotKilled(bot, weaponName = 'AK-47') {
+  public onBotKilled(_bot: Bot, weaponName: string = 'AK-47'): void {
     this.kills++;
     this.score += 150 + this.wave * 50;
     this.addKillfeed('You', 'Militia Bot', weaponName);
     this.updateHUD();
 
-    // Check if wave is completed
     const activeBots = this.bots.filter(b => !b.isDead);
     if (activeBots.length <= 1 && this.waveInProgress) {
       this.waveInProgress = false;
@@ -354,7 +398,8 @@ export class Game {
     }
   }
 
-  executeMeleeStrike() {
+  public executeMeleeStrike(): void {
+    if (!this.player) return;
     sounds.play('melee', { volume: 0.9 });
     const punchReach = 2.4;
     const punchX = this.player.pos.x + (this.player.facingRight ? 1.2 : -1.2);
@@ -373,13 +418,14 @@ export class Game {
     }
   }
 
-  swapOrPickupWeapon() {
-    // Check if standing on a floating pickup
+  public swapOrPickupWeapon(): void {
+    if (!this.player) return;
+
     for (let i = this.map.pickups.length - 1; i >= 0; i--) {
       const p = this.map.pickups[i];
       const dist = Math.hypot(p.position.x - this.player.pos.x, p.position.y - this.player.pos.y);
       if (dist < 1.8) {
-        const type = p.userData.type;
+        const type: string = p.userData.type;
         sounds.play('pickup', { volume: 0.85 });
 
         if (type === 'healthpack') {
@@ -393,7 +439,6 @@ export class Game {
           this.updateHUD();
           return;
         } else if (WEAPON_TYPES[type]) {
-          // Swap active weapon
           this.player.weapon = new WeaponInstance(type);
           this.player.model.weaponMount.remove(this.player.weaponMesh);
           this.player.weaponMesh = createWeaponMesh(type);
@@ -405,7 +450,6 @@ export class Game {
       }
     }
 
-    // Otherwise swap primary and secondary
     sounds.play('switch', { volume: 0.8 });
     const temp = this.player.weapon;
     this.player.weapon = this.player.secondaryWeapon;
@@ -417,11 +461,11 @@ export class Game {
     this.updateHUD();
   }
 
-  updatePlayer(dt) {
+  private updatePlayer(dt: number): void {
+    if (!this.player) return;
     const p = this.player;
     p.weapon.update(dt);
 
-    // 1. Movement Input (Keyboard WASD or Mobile Touch Joystick)
     let moveX = 0;
     if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX -= 1;
     if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX += 1;
@@ -430,7 +474,6 @@ export class Game {
     const moveSpeed = 22;
     p.vel.x += moveX * moveSpeed * dt;
 
-    // 2. Jetpack Booster (W, Space, Up Arrow, or Joystick Up)
     let boostThrust = (this.keys['KeyW'] || this.keys['Space'] || this.keys['ArrowUp']);
     if (this.joysticks.move.active && this.joysticks.move.y > 0.3) {
       boostThrust = true;
@@ -443,7 +486,6 @@ export class Game {
 
       sounds.startLoop('jet', 'player_jet', 0.4);
 
-      // Jetpack flame particles
       const nozzleOffset = p.facingRight ? -0.2 : 0.2;
       this.particles.emitJetpackFlame(
         p.pos.x + nozzleOffset,
@@ -453,13 +495,11 @@ export class Game {
     } else {
       p.isBoosting = false;
       sounds.stopLoop('jet', 'player_jet');
-      // Regenerate fuel on ground
       if (p.onGround) {
         p.jetpackFuel = Math.min(p.maxFuel, p.jetpackFuel + 32 * dt);
       }
     }
 
-    // 3. Aiming (Mouse on Desktop or Right Virtual Joystick on Mobile)
     let aimAngle = 0;
     if (this.joysticks.aim.active) {
       aimAngle = Math.atan2(this.joysticks.aim.y, this.joysticks.aim.x);
@@ -475,7 +515,6 @@ export class Game {
     p.model.root.scale.x = p.facingRight ? 1 : -1;
     p.model.armPivot.rotation.z = p.facingRight ? aimAngle : Math.PI - aimAngle;
 
-    // 4. Shooting (Mouse Left Click or Right Joystick Drag)
     const wantsToShoot = this.mouse.down || (this.joysticks.aim.active && Math.hypot(this.joysticks.aim.x, this.joysticks.aim.y) > 0.45);
     const now = performance.now() / 1000;
 
@@ -486,14 +525,12 @@ export class Game {
       sounds.play(p.weapon.def.sound, { volume: 0.95 });
       this.addScreenShake(p.weapon.def.isRocket ? 0.45 : 0.12);
 
-      // Muzzle location
       const worldAim = p.facingRight ? p.aimAngle : Math.PI - p.aimAngle;
       const muzzleX = p.pos.x + Math.cos(worldAim) * 0.95;
       const muzzleY = p.pos.y + 0.7 + Math.sin(worldAim) * 0.95;
 
       this.particles.emitMuzzleFlash(muzzleX, muzzleY, 0, worldAim);
 
-      // Spawn Pellets
       for (let i = 0; i < p.weapon.def.pellets; i++) {
         const spreadAngle = worldAim + (Math.random() - 0.5) * p.weapon.def.spread;
         this.spawnBullet({
@@ -508,7 +545,6 @@ export class Game {
         });
       }
 
-      // Recoil kickback
       p.vel.x -= Math.cos(worldAim) * 2.5;
       p.vel.y -= Math.sin(worldAim) * 2.5;
     } else if (wantsToShoot && p.weapon.ammoInClip <= 0 && !p.weapon.isReloading) {
@@ -520,23 +556,23 @@ export class Game {
       }
     }
 
-    // 5. Physics Integration
-    p.vel.y -= 28 * dt; // gravity
-    p.vel.x *= 0.93;    // horizontal drag
+    p.vel.y -= 28 * dt;
+    p.vel.x *= 0.93;
 
     p.pos.x += p.vel.x * dt;
     p.pos.y += p.vel.y * dt;
 
     p.onGround = this.physics.resolveCircle(p.pos, p.radius, p.vel);
 
-    // 6. Update 3D Mesh
     p.model.root.position.set(p.pos.x, p.pos.y, 0);
     p.model.animateWalk(p.vel.x, p.isBoosting || !p.onGround);
 
     this.updateHUD();
   }
 
-  updateBullets(dt) {
+  private updateBullets(dt: number): void {
+    if (!this.player) return;
+
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       b.life -= dt;
@@ -551,7 +587,6 @@ export class Game {
       const prevY = b.y;
 
       if (b.isRocket) {
-        // Accelerating rocket
         b.vx *= 1.03;
         b.vy *= 1.03;
         this.particles.emitJetpackFlame(b.x, b.y, 0, -b.vx / 30, -b.vy / 30);
@@ -561,7 +596,6 @@ export class Game {
       b.y += b.vy * dt;
       b.mesh.position.set(b.x, b.y, 0);
 
-      // Raycast against map collision segments
       const hit = this.physics.raycast(prevX, prevY, b.x, b.y);
       if (hit) {
         if (b.isRocket) {
@@ -575,7 +609,6 @@ export class Game {
         continue;
       }
 
-      // Check collision with Player (if bot fired)
       if (b.owner === 'bot') {
         const d = Math.hypot(this.player.pos.x - b.x, (this.player.pos.y + 0.6) - b.y);
         if (d < this.player.radius) {
@@ -590,7 +623,6 @@ export class Game {
         }
       }
 
-      // Check collision with Bots (if player fired)
       if (b.owner === 'player') {
         let hitBot = false;
         for (const bot of this.bots) {
@@ -600,7 +632,7 @@ export class Game {
             if (b.isRocket) {
               this.triggerExplosion(b.x, b.y, 4.5, 140);
             } else {
-              bot.takeDamage(b.damage, this.map, (deadBot) => this.onBotKilled(deadBot, this.player.weapon.def.name));
+              bot.takeDamage(b.damage, this.map, (deadBot) => this.onBotKilled(deadBot, this.player?.weapon.def.name || 'Rifle'));
             }
             this.scene.remove(b.mesh);
             this.bullets.splice(i, 1);
@@ -611,7 +643,6 @@ export class Game {
         if (hitBot) continue;
       }
 
-      // Check collision with Barrels
       for (const barrel of this.map.barrels) {
         const d = Math.hypot(barrel.position.x - b.x, barrel.position.y - b.y);
         if (d < barrel.userData.radius) {
@@ -630,7 +661,7 @@ export class Game {
     }
   }
 
-  updateGrenades(dt) {
+  private updateGrenades(dt: number): void {
     for (let i = this.grenades.length - 1; i >= 0; i--) {
       const g = this.grenades[i];
       g.fuse -= dt;
@@ -642,7 +673,6 @@ export class Game {
         continue;
       }
 
-      // Gravity & Bounce
       g.vy -= 26 * dt;
       g.x += g.vx * dt;
       g.y += g.vy * dt;
@@ -653,7 +683,7 @@ export class Game {
 
       g.x = pos.x;
       g.y = pos.y;
-      g.vx = vel.x * 0.7; // friction
+      g.vx = vel.x * 0.7;
       g.vy = vel.y * 0.7;
 
       g.mesh.position.set(g.x, g.y, 0);
@@ -661,17 +691,15 @@ export class Game {
     }
   }
 
-  updateCamera(dt) {
+  private updateCamera(dt: number): void {
     if (!this.player) return;
 
-    // Follow player with lead in aiming direction
     const leadX = Math.cos(this.player.aimAngle) * 4;
     const leadY = Math.sin(this.player.aimAngle) * 2;
 
     this.camTarget.x = THREE.MathUtils.lerp(this.camTarget.x, this.player.pos.x + leadX, 0.08);
     this.camTarget.y = THREE.MathUtils.lerp(this.camTarget.y, this.player.pos.y + leadY + 1.2, 0.08);
 
-    // Apply Screen Shake
     let shakeOffsetX = 0, shakeOffsetY = 0;
     if (this.screenShake > 0) {
       shakeOffsetX = (Math.random() - 0.5) * this.screenShake * 1.5;
@@ -687,22 +715,19 @@ export class Game {
     this.camera.lookAt(this.camTarget.x, this.camTarget.y, 0);
   }
 
-  updateHUD() {
+  public updateHUD(): void {
     if (!this.player) return;
 
-    // Health Bar
     const hpBar = document.getElementById('health-bar');
     if (hpBar) {
       hpBar.style.width = `${Math.max(0, this.player.health)}%`;
     }
 
-    // Boost Bar
     const boostBar = document.getElementById('boost-bar');
     if (boostBar) {
       boostBar.style.width = `${Math.max(0, this.player.jetpackFuel)}%`;
     }
 
-    // Ammo Counter
     const currAmmo = document.getElementById('current-ammo');
     const resAmmo = document.getElementById('reserve-ammo');
     const wepName = document.getElementById('weapon-name');
@@ -712,28 +737,25 @@ export class Game {
       resAmmo.textContent = String(this.player.weapon.reserveAmmo).padStart(3, '0');
     }
 
-    // Grenade count
     const gCount = document.getElementById('grenade-count');
     if (gCount) {
-      gCount.textContent = this.player.grenades;
+      gCount.textContent = String(this.player.grenades);
     }
 
-    // Score & Kills
     const sElem = document.getElementById('score-val');
     const kElem = document.getElementById('kills-val');
     if (sElem && kElem) {
-      sElem.textContent = this.score;
-      kElem.textContent = this.kills;
+      sElem.textContent = String(this.score);
+      kElem.textContent = String(this.kills);
     }
 
-    // Wave indicator
     const wTitle = document.getElementById('wave-title');
     if (wTitle) {
       wTitle.textContent = `WAVE ${this.wave}`;
     }
   }
 
-  triggerGameOver() {
+  private triggerGameOver(): void {
     this.isGameOver = true;
     sounds.playRandomDeath();
 
@@ -742,14 +764,14 @@ export class Game {
     const goKills = document.getElementById('go-kills');
     const goScore = document.getElementById('go-score');
 
-    if (goWaves) goWaves.textContent = this.wave;
-    if (goKills) goKills.textContent = this.kills;
-    if (goScore) goScore.textContent = this.score;
+    if (goWaves) goWaves.textContent = String(this.wave);
+    if (goKills) goKills.textContent = String(this.kills);
+    if (goScore) goScore.textContent = String(this.score);
 
     if (goModal) goModal.classList.remove('hidden');
   }
 
-  animate(currentTime) {
+  public animate(currentTime: number): void {
     requestAnimationFrame(this.animate);
 
     const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
@@ -757,7 +779,6 @@ export class Game {
 
     if (this.isPaused) return;
 
-    // Countdown Timer
     if (!this.isGameOver) {
       this.matchTime -= dt;
       const mins = Math.floor(Math.max(0, this.matchTime) / 60);
@@ -768,40 +789,35 @@ export class Game {
       }
     }
 
-    // Update Player
     if (this.player && !this.isGameOver) {
       this.updatePlayer(dt);
     }
 
-    // Update Bots
-    for (const bot of this.bots) {
-      bot.update(dt, this.player, (opts) => this.spawnBullet(opts), this.map);
+    if (this.player) {
+      for (const bot of this.bots) {
+        bot.update(dt, this.player, (opts) => this.spawnBullet(opts), this.map);
+      }
     }
 
-    // Update Bullets & Grenades
     this.updateBullets(dt);
     this.updateGrenades(dt);
 
-    // Update Particles & Environment
     this.particles.update(dt);
     this.map.update(dt);
 
-    // Update Camera Follow
     this.updateCamera(dt);
 
     this.renderer.render(this.scene, this.camera);
   }
 
-  setupEventListeners() {
-    // Window resize
+  private setupEventListeners(): void {
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Keyboard events
-    window.addEventListener('keydown', (e) => {
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
       this.keys[e.code] = true;
 
       if (e.code === 'KeyG' || e.code === 'KeyQ') {
@@ -823,16 +839,14 @@ export class Game {
       }
     });
 
-    window.addEventListener('keyup', (e) => {
+    window.addEventListener('keyup', (e: KeyboardEvent) => {
       this.keys[e.code] = false;
     });
 
-    // Mouse events
-    window.addEventListener('mousemove', (e) => {
+    window.addEventListener('mousemove', (e: MouseEvent) => {
       this.mouse.x = e.clientX;
       this.mouse.y = e.clientY;
 
-      // Project mouse screen coords into 3D world space at z=0 plane
       const vec = new THREE.Vector3(
         (e.clientX / window.innerWidth) * 2 - 1,
         -(e.clientY / window.innerHeight) * 2 + 1,
@@ -846,11 +860,10 @@ export class Game {
       this.mouse.worldY = worldPos.y;
     });
 
-    window.addEventListener('mousedown', (e) => {
+    window.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button === 0) {
         this.mouse.down = true;
       } else if (e.button === 2) {
-        // Right click throws grenade
         e.preventDefault();
         if (this.player) {
           this.throwGrenade(this.player.pos.x, this.player.pos.y + 0.8, this.player.aimAngle);
@@ -858,29 +871,28 @@ export class Game {
       }
     });
 
-    window.addEventListener('mouseup', (e) => {
+    window.addEventListener('mouseup', (e: MouseEvent) => {
       if (e.button === 0) {
         this.mouse.down = false;
       }
     });
 
-    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('contextmenu', (e: MouseEvent) => e.preventDefault());
 
-    // Setup Dual Virtual Touch Joysticks
     this.setupTouchJoysticks();
   }
 
-  setupTouchJoysticks() {
+  private setupTouchJoysticks(): void {
     const leftZone = document.getElementById('joystick-left');
     const rightZone = document.getElementById('joystick-right');
     const nubLeft = document.getElementById('nub-left');
     const nubRight = document.getElementById('nub-right');
 
-    const handleStick = (zone, nub, stickData) => {
+    const handleStick = (zone: HTMLElement | null, nub: HTMLElement | null, stickData: JoystickState) => {
       if (!zone || !nub) return;
-      let touchId = null;
+      let touchId: number | null = null;
 
-      const onTouchMove = (e) => {
+      const onTouchMove = (e: TouchEvent) => {
         for (let i = 0; i < e.touches.length; i++) {
           const t = e.touches[i];
           if (t.identifier === touchId) {
@@ -899,13 +911,13 @@ export class Game {
             nub.style.transform = `translate(${normX}px, ${normY}px)`;
             stickData.active = true;
             stickData.x = normX / maxRadius;
-            stickData.y = -normY / maxRadius; // invert Y for upwards
+            stickData.y = -normY / maxRadius;
             break;
           }
         }
       };
 
-      const onTouchEnd = (e) => {
+      const onTouchEnd = (e: TouchEvent) => {
         for (let i = 0; i < e.changedTouches.length; i++) {
           if (e.changedTouches[i].identifier === touchId) {
             touchId = null;
@@ -920,7 +932,7 @@ export class Game {
         }
       };
 
-      zone.addEventListener('touchstart', (e) => {
+      zone.addEventListener('touchstart', (e: TouchEvent) => {
         e.preventDefault();
         if (touchId === null && e.changedTouches.length > 0) {
           touchId = e.changedTouches[0].identifier;
@@ -935,8 +947,7 @@ export class Game {
     handleStick(rightZone, nubRight, this.joysticks.aim);
   }
 
-  setupHUD() {
-    // Action Buttons
+  private setupHUD(): void {
     const btnMelee = document.getElementById('btn-touch-melee');
     if (btnMelee) btnMelee.addEventListener('click', () => this.executeMeleeStrike());
 
@@ -958,7 +969,6 @@ export class Game {
       }
     });
 
-    // Pause button
     const btnPause = document.getElementById('btn-pause');
     const pauseModal = document.getElementById('pause-overlay');
     const btnResume = document.getElementById('btn-resume');
