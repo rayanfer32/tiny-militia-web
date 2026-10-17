@@ -626,30 +626,45 @@ html, body {
 
 /* Menus & Modals */
 .menu-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(12px, env(safe-area-inset-top, 12px)) max(16px, env(safe-area-inset-right, 16px)) max(12px, env(safe-area-inset-bottom, 12px)) max(16px, env(safe-area-inset-left, 16px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .menu-card {
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, 0.92);
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 20px;
-  padding: 36px 40px;
-  max-width: 580px;
+  padding: 30px 36px;
+  max-width: 560px;
   width: 100%;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  margin: auto;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75);
   animation: modalEnter 0.3s ease-out;
+}
+
+.menu-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
 }
 
 @keyframes modalEnter {
@@ -1056,44 +1071,440 @@ body.pointer-locked #game-canvas {
   }
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+/* =========================================================
+   Responsive Adjustments for Mobile Devices (Landscape & Portrait)
+   ========================================================= */
+
+/* Mobile Landscape & Short Screens (e.g. Pixel 9 924x412, iPhone Landscape) */
+@media (max-height: 550px) {
+  .menu-overlay {
+    padding: max(6px, env(safe-area-inset-top, 6px)) max(12px, env(safe-area-inset-right, 12px)) max(6px, env(safe-area-inset-bottom, 6px)) max(12px, env(safe-area-inset-left, 12px));
+  }
+
+  .menu-card {
+    padding: 12px 22px;
+    max-width: 520px;
+    max-height: 96vh;
+    border-radius: 14px;
+    border-width: 1.5px;
+  }
+
+  .game-logo {
+    font-size: 1.65rem;
+    letter-spacing: 2px;
+    line-height: 1.1;
+  }
+
+  .tagline {
+    font-size: 0.62rem;
+    letter-spacing: 1.5px;
+    margin-top: 1px;
+  }
+
+  .soldier-preview-badge {
+    margin: 4px 0 6px 0;
+    padding: 2px 10px;
+    font-size: 0.68rem;
+    gap: 5px;
+  }
+
+  .intro-desc {
+    display: none; /* Hide lengthy text to make room for controls and action button without scrolling */
+  }
+
+  .controls-preview-grid {
+    padding: 6px 12px;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.66rem;
+    border-radius: 8px;
+  }
+
+  .ctrl-col strong {
+    font-size: 0.62rem;
+    margin-bottom: 2px;
+  }
+
+  .ctrl-col div {
+    margin-bottom: 1px;
+  }
+
+  .btn-primary-action {
+    padding: 9px 16px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    letter-spacing: 1.5px;
+  }
+
+  /* Pause Modal in Landscape */
+  #pause-overlay .menu-card {
+    max-width: 440px;
+    padding: 14px 22px;
+  }
+
+  #pause-overlay h2 {
+    font-size: 1.25rem;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+
+  .pause-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .pause-actions .btn-primary-action,
+  .pause-actions .btn-secondary-action {
+    margin-top: 0;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    flex: 1;
+  }
+
+  /* Game Over Modal in Landscape */
+  .gameover-card {
+    max-width: 460px;
+    padding: 14px 20px;
+  }
+
+  .gameover-title {
+    font-size: 1.35rem;
+    margin-bottom: 8px;
+  }
+
+  .stats-summary {
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .stat-box {
+    padding: 4px 10px;
+    border-radius: 8px;
+  }
+
+  .stat-label {
+    font-size: 0.58rem;
+  }
+
+  .stat-number {
+    font-size: 1.25rem;
+  }
+
+  /* In-game HUD in Landscape */
+  .hud-top-left {
+    top: max(6px, env(safe-area-inset-top, 6px));
+    left: max(8px, env(safe-area-inset-left, 8px));
+    gap: 4px;
+  }
+
+  .status-panel {
+    min-width: 155px;
+    padding: 4px 8px;
+    gap: 4px;
+    border-width: 1.5px;
+  }
+
+  .stat-row {
+    gap: 6px;
+  }
+
+  .meter-bar-wrapper {
+    height: 10px;
+  }
+
+  .stat-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .btn-hud-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .btn-hud-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .test-mode-btn {
+    padding: 2px 7px;
+    font-size: 8.5px;
+    gap: 4px;
+  }
+
+  .test-badge-icon {
+    font-size: 10px;
+  }
+
+  .hud-top-center {
+    top: max(6px, env(safe-area-inset-top, 6px));
+    gap: 2px;
+  }
+
+  .wave-badge {
+    padding: 1px 8px;
+    font-size: 0.68rem;
+  }
+
+  .clock-panel {
+    padding: 2px 10px;
+    font-size: 1rem;
+  }
+
+  .score-display {
+    font-size: 0.68rem;
+    gap: 8px;
+  }
+
+  .hud-top-right {
+    top: max(6px, env(safe-area-inset-top, 6px));
+    right: max(8px, env(safe-area-inset-right, 8px));
+  }
+
+  .weapon-panel {
+    padding: 4px 8px;
+    gap: 8px;
+    border-width: 1.5px;
+  }
+
+  .weapon-name {
+    font-size: 0.78rem;
+  }
+
+  .ammo-counter {
+    font-size: 0.95rem;
+  }
+
+  .ammo-res {
+    font-size: 0.75rem;
+  }
+
+  .weapon-graphic {
+    width: 44px;
+    height: 18px;
+  }
+
+  .grenade-slot {
+    padding: 3px 6px;
+    gap: 4px;
+  }
+
+  .grenade-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  #grenade-count {
+    font-size: 0.95rem;
+  }
+
+  /* Virtual Touch Controls in Landscape */
+  .touch-controls {
+    height: 135px;
+    padding: 0 max(16px, env(safe-area-inset-right, 16px)) 6px max(16px, env(safe-area-inset-left, 16px));
+  }
+
+  .joystick-zone {
+    width: 110px;
+    height: 110px;
+  }
+
+  .joystick-nub {
+    width: 38px;
+    height: 38px;
+    top: calc(50% - 19px);
+    left: calc(50% - 19px);
+  }
+
+  .stick-label {
+    font-size: 0.52rem;
+    bottom: -15px;
+  }
+
+  .touch-actions {
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .action-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .action-btn span {
+    font-size: 0.48rem;
+    margin-top: 1px;
+  }
+
+  .event-banner {
+    padding: 8px 18px;
+  }
+
+  .event-banner h2 {
+    font-size: 1.25rem;
+  }
+
+  .event-banner p {
+    font-size: 0.72rem;
+  }
+
+  .sarge-box {
+    bottom: 125px;
+    max-width: 250px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+
+  .killfeed {
+    top: 65px;
+    left: 8px;
+    max-width: 160px;
+  }
+
+  .killfeed-item {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+
+  .desktop-hints,
   .target-indicator,
   .pointer-lock-prompt {
     display: none !important;
   }
-  .status-panel {
-    min-width: 190px;
-    padding: 6px 10px;
+}
+
+/* Mobile Portrait & Narrow Screens */
+@media (max-width: 768px) {
+  .menu-card {
+    width: 92%;
+    max-width: 440px;
+    padding: 22px 18px;
+    max-height: 92vh;
   }
-  .hud-top-left {
-    top: 10px;
-    left: 10px;
+
+  .game-logo {
+    font-size: 2.1rem;
   }
-  .hud-top-right {
-    top: 10px;
-    right: 10px;
+
+  .intro-desc {
+    font-size: 0.85rem;
+    margin-bottom: 14px;
   }
-  .weapon-panel {
-    padding: 6px 12px;
+
+  .controls-preview-grid {
+    grid-template-columns: 1fr;
     gap: 10px;
+    padding: 10px;
+    margin-bottom: 16px;
   }
-  .clock-panel {
-    padding: 4px 12px;
-    font-size: 1.1rem;
+
+  .desktop-hints,
+  .target-indicator,
+  .pointer-lock-prompt {
+    display: none !important;
   }
-  .touch-controls {
-    padding: 0 15px 15px 15px;
+
+  .status-panel {
+    min-width: 150px;
+    padding: 5px 8px;
   }
-  .joystick-zone {
-    width: 130px;
-    height: 130px;
+
+  .hud-top-left {
+    top: max(8px, env(safe-area-inset-top, 8px));
+    left: max(8px, env(safe-area-inset-left, 8px));
   }
-  .action-btn {
-    width: 50px;
-    height: 50px;
+
+  .hud-top-right {
+    top: max(8px, env(safe-area-inset-top, 8px));
+    right: max(8px, env(safe-area-inset-right, 8px));
   }
-  .desktop-hints {
+
+  .weapon-panel {
+    padding: 5px 8px;
+    gap: 8px;
+  }
+
+  .weapon-graphic {
     display: none;
+  }
+
+  .clock-panel {
+    padding: 3px 10px;
+    font-size: 1.05rem;
+  }
+
+  .touch-controls {
+    height: 160px;
+    padding: 0 16px 12px 16px;
+  }
+
+  .joystick-zone {
+    width: 125px;
+    height: 125px;
+  }
+
+  .action-btn {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Very narrow phones (width <= 480px) */
+@media (max-width: 480px) {
+  .status-panel {
+    min-width: 135px;
+  }
+
+  .test-mode-btn {
+    padding: 3px 7px;
+    font-size: 8px;
+  }
+
+  .hud-top-center {
+    top: 6px;
+  }
+
+  .wave-badge {
+    font-size: 0.65rem;
+    padding: 1px 6px;
+  }
+
+  .score-display {
+    font-size: 0.65rem;
+    gap: 6px;
+  }
+
+  .weapon-name {
+    font-size: 0.72rem;
+  }
+
+  .ammo-counter {
+    font-size: 0.85rem;
+  }
+
+  .joystick-zone {
+    width: 110px;
+    height: 110px;
+  }
+
+  .action-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Touchscreens generally */
+@media (hover: none) and (pointer: coarse) {
+  .target-indicator,
+  .pointer-lock-prompt,
+  .desktop-hints {
+    display: none !important;
   }
 }
