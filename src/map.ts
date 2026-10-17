@@ -34,6 +34,8 @@ export class OutpostMap {
 
   private rockMat: THREE.MeshToonMaterial;
   private grassMat: THREE.MeshToonMaterial;
+  private grassDarkMat: THREE.MeshToonMaterial;
+  private clayMat: THREE.MeshToonMaterial;
 
   constructor(scene: THREE.Scene, physics: PhysicsEngine) {
     this.scene = scene;
@@ -41,15 +43,26 @@ export class OutpostMap {
     this.mapGroup = new THREE.Group();
     this.scene.add(this.mapGroup);
 
+    // Warm desert stone palette matching idea.avif
     this.rockMat = new THREE.MeshToonMaterial({
-      color: 0x757f86,
+      color: 0xb59e85,
       polygonOffset: true,
       polygonOffsetFactor: 1,
       polygonOffsetUnits: 1
     });
 
+    // Lush vibrant cartoon grass sod
     this.grassMat = new THREE.MeshToonMaterial({
-      color: 0x55a630
+      color: 0x5ea82e
+    });
+
+    this.grassDarkMat = new THREE.MeshToonMaterial({
+      color: 0x467e22
+    });
+
+    // Terracotta clay soil pocket accent
+    this.clayMat = new THREE.MeshToonMaterial({
+      color: 0x98523d
     });
   }
 
@@ -91,11 +104,11 @@ export class OutpostMap {
       bevelEnabled: true,
       bevelSegments: 2,
       steps: 1,
-      bevelSize: 0.1,
-      bevelThickness: 0.1
+      bevelSize: 0.12,
+      bevelThickness: 0.12
     };
 
-    polygons.forEach((poly) => {
+    polygons.forEach((poly, polyIdx) => {
       if (poly.points.length < 3) return;
 
       const shape = new THREE.Shape();
@@ -114,13 +127,37 @@ export class OutpostMap {
 
       // Do NOT center geom: keeps coordinates 1:1 with collision segments
       const mesh = new THREE.Mesh(geom, this.rockMat);
-      // Place rock behind player plane (front face at -3.7 + 3.5 + 0.1 = -0.1)
       mesh.position.set(0, 0, -3.7);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.mapGroup.add(mesh);
 
-      // Add stylized cartoon green grass trims along upward-facing edges
+      // Add terracotta clay cutout pockets on select large rock faces (matching idea.avif)
+      if ([1, 5, 7, 12].includes(polyIdx)) {
+        const avgX = worldPts.reduce((s, p) => s + p.x, 0) / worldPts.length;
+        const avgY = worldPts.reduce((s, p) => s + p.y, 0) / worldPts.length;
+
+        const clayRadius = polyIdx === 12 ? 2.4 : 1.6;
+        const clayGeo = new THREE.CylinderGeometry(clayRadius, clayRadius, 0.15, 14);
+        clayGeo.rotateX(Math.PI / 2);
+        const clayMesh = new THREE.Mesh(clayGeo, this.clayMat);
+        clayMesh.position.set(avgX + 0.5, avgY - 0.3, -0.15);
+        this.mapGroup.add(clayMesh);
+
+        // Frame clay pocket with a few small stones
+        for (let a = 0; a < 5; a++) {
+          const theta = (a / 5) * Math.PI * 2;
+          const rChunk = createRock(0.25, 'sandy');
+          rChunk.position.set(
+            avgX + 0.5 + Math.cos(theta) * clayRadius,
+            avgY - 0.3 + Math.sin(theta) * clayRadius,
+            -0.12
+          );
+          this.mapGroup.add(rChunk);
+        }
+      }
+
+      // Add stylized layered cartoon grass, drooping tufts, and faceted boulders
       for (let i = 0; i < worldPts.length; i++) {
         const p1 = worldPts[i];
         const p2 = worldPts[(i + 1) % worldPts.length];
@@ -129,20 +166,63 @@ export class OutpostMap {
         const len = Math.hypot(dx, dy);
         if (len < 0.1) continue;
 
-        // In CW polygons, normal ny = dx / len. Surfaces with dx / len > 0.35 are walk-on ground
+        // Silhouette faceted rocks embedded along rock edges and corners
+        if (len > 0.8 && (i % 2 === 0)) {
+          const boulder = createRock(
+            0.35 + Math.random() * 0.45,
+            Math.random() < 0.6 ? 'sandy' : (Math.random() < 0.5 ? 'warm' : 'grey')
+          );
+          boulder.position.set(
+            p1.x + dx * 0.5 + (Math.random() - 0.5) * 0.3,
+            p1.y + dy * 0.5 + (Math.random() - 0.5) * 0.3,
+            -0.45 + (Math.random() - 0.5) * 0.3
+          );
+          boulder.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+          this.mapGroup.add(boulder);
+        }
+
+        // In CW polygons: normal ny = dx / len. Surfaces with dx / len > 0.35 are walk-on ground
         if (dx / len > 0.35) {
-          const grassBoxGeo = new THREE.BoxGeometry(len + 0.15, 0.35, 3.6);
+          // 1. Main grass sod bed
+          const grassBoxGeo = new THREE.BoxGeometry(len + 0.2, 0.4, 3.6);
           const grass = new THREE.Mesh(grassBoxGeo, this.grassMat);
-          grass.position.set((p1.x + p2.x) / 2, (p1.y + p2.y) / 2 + 0.05, -1.95);
+          grass.position.set((p1.x + p2.x) / 2, (p1.y + p2.y) / 2 + 0.08, -1.95);
           grass.rotation.z = Math.atan2(dy, dx);
           this.mapGroup.add(grass);
 
-          if (Math.random() < 0.5 && len > 3) {
-            const rock = createRock(0.3 + Math.random() * 0.3);
+          // 2. Hanging / Drooping stylized triangular grass tufts (concept art charm!)
+          const edgeAngle = Math.atan2(dy, dx);
+          const tuftCount = Math.max(1, Math.floor(len / 1.1));
+          for (let t = 0; t <= tuftCount; t++) {
+            const frac = (t + 0.25) / (tuftCount + 0.5);
+            const tx = p1.x + frac * dx;
+            const ty = p1.y + frac * dy;
+
+            const tuftH = 0.35 + (t % 3) * 0.12;
+            const tuftGeo = new THREE.ConeGeometry(0.18, tuftH, 3);
+            tuftGeo.rotateZ(Math.PI); // Point downward
+            const tuft = new THREE.Mesh(tuftGeo, t % 2 === 0 ? this.grassMat : this.grassDarkMat);
+            tuft.position.set(tx, ty - 0.12, -0.15);
+            tuft.rotation.z = edgeAngle + Math.PI + (Math.random() - 0.5) * 0.2;
+            this.mapGroup.add(tuft);
+          }
+
+          // 3. Standing grass sprouts on top surface
+          if (len > 1.8) {
+            const sproutGeo = new THREE.ConeGeometry(0.08, 0.32, 3);
+            const sprout = new THREE.Mesh(sproutGeo, this.grassMat);
+            sprout.position.set(p1.x + dx * 0.4, p1.y + dy * 0.4 + 0.28, -0.3);
+            sprout.rotation.z = edgeAngle + (Math.random() - 0.5) * 0.3;
+            this.mapGroup.add(sprout);
+          }
+
+          // 4. Cluster of low-poly stone boulders on the walking surface
+          if (Math.random() < 0.65 && len > 2.5) {
+            const rock = createRock(0.35 + Math.random() * 0.35, 'sandy');
             rock.position.set(
               p1.x + (Math.random() * 0.6 + 0.2) * dx,
-              p1.y + 0.15,
-              -0.5 + (Math.random() - 0.5) * 0.2
+              p1.y + 0.22,
+              -0.45 + (Math.random() - 0.5) * 0.2
             );
             this.mapGroup.add(rock);
           }
@@ -152,21 +232,40 @@ export class OutpostMap {
   }
 
   private buildDecorations(): void {
-    const palmPositions = [
-      { x: -28, y: 12 },
-      { x: -14, y: 7 },
-      { x: 4, y: 6 },
-      { x: 18, y: 11 },
-      { x: 32, y: 4 },
-      { x: -45, y: -2 }
+    // Palm trees planted strictly on the top grass surfaces of floating rocks and cliffs
+    const palmLocations = [
+      // Left high floating rock (Poly 3) - rooted on top surface
+      { x: -17.5, y: 13.8, lean: 0.14, scale: 1.15 },
+      // Right high floating rock (Poly 6) - rooted on top surface
+      { x: 26.0, y: 16.2, lean: -0.16, scale: 1.12 },
+      // Central floating island (Poly 5) - upper ridge
+      { x: 8.5, y: 8.8, lean: 0.12, scale: 1.2 },
+      // Mid-left floating rock (Poly 4)
+      { x: -21.5, y: 1.5, lean: -0.12, scale: 1.05 },
+      // Mid-right floating rock (Poly 7)
+      { x: 33.5, y: 2.4, lean: 0.14, scale: 1.08 },
+      // Left large cliff (Poly 1)
+      { x: -53.5, y: 9.2, lean: -0.15, scale: 1.25 },
+      // Right large upper island (Poly 8)
+      { x: 48.0, y: 11.2, lean: 0.16, scale: 1.25 },
+      // Right ground plateau (Poly 12)
+      { x: 56.5, y: -4.7, lean: -0.12, scale: 1.15 },
+      { x: 63.5, y: -4.7, lean: 0.14, scale: 1.1 }
     ];
 
-    palmPositions.forEach(pos => {
-      const palm = createPalmTree();
-      palm.position.set(pos.x, pos.y, -2.0);
-      palm.scale.set(1.1, 1.1, 1.1);
+    palmLocations.forEach(p => {
+      const palm = createPalmTree(p.lean);
+      palm.position.set(p.x, p.y, -1.8);
+      palm.scale.set(p.scale, p.scale, p.scale);
       this.mapGroup.add(palm);
     });
+
+    // Small wood stump / log detail on left cliff (matching idea.avif)
+    const logGeo = new THREE.CylinderGeometry(0.32, 0.35, 0.55, 8);
+    const logMat = new THREE.MeshToonMaterial({ color: 0x7a431d });
+    const log = new THREE.Mesh(logGeo, logMat);
+    log.position.set(-18.5, -4.2, -0.6);
+    this.mapGroup.add(log);
   }
 
   private buildScenery(): void {

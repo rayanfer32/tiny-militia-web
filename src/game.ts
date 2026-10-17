@@ -122,12 +122,12 @@ export class Game {
   }
 
   private initLights(): void {
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444455, 0.95);
+    const hemiLight = new THREE.HemisphereLight(0x9bd4ff, 0x5a7a42, 1.05);
     hemiLight.position.set(0, 50, 0);
     this.scene.add(hemiLight);
 
-    const sun = new THREE.DirectionalLight(0xfff3b0, 1.4);
-    sun.position.set(20, 35, 25);
+    const sun = new THREE.DirectionalLight(0xfff2dc, 1.55);
+    sun.position.set(22, 38, 28);
     sun.castShadow = true;
     sun.shadow.mapSize.width = 2048;
     sun.shadow.mapSize.height = 2048;
@@ -139,6 +139,11 @@ export class Game {
     sun.shadow.camera.bottom = -30;
     sun.shadow.bias = -0.0005;
     this.scene.add(sun);
+
+    // Warm underside bounce light for rich cartoon depth (concept art feel)
+    const bounceFill = new THREE.DirectionalLight(0xffdec2, 0.4);
+    bounceFill.position.set(-15, -20, 15);
+    this.scene.add(bounceFill);
   }
 
   public async start(): Promise<void> {

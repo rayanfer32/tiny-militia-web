@@ -24,9 +24,11 @@ export const MATS: Record<string, THREE.Material> = {
   grenadeGreen: new THREE.MeshToonMaterial({ color: 0x386641 }),
 
   // Environment & Objects
-  palmTrunk: new THREE.MeshToonMaterial({ color: 0x8b5a2b }),
-  palmLeaves: new THREE.MeshToonMaterial({ color: 0x55a630 }),
-  rockGrey: new THREE.MeshToonMaterial({ color: 0x6c757d }),
+  palmTrunk: new THREE.MeshToonMaterial({ color: 0x824d26 }),
+  palmLeaves: new THREE.MeshToonMaterial({ color: 0x5da82e }),
+  rockGrey: new THREE.MeshToonMaterial({ color: 0xc4b7a6 }),
+  rockWarm: new THREE.MeshToonMaterial({ color: 0x9f7f68 }),
+  rockClay: new THREE.MeshToonMaterial({ color: 0x98523d }),
   crateWood: new THREE.MeshToonMaterial({ color: 0x9c6644 }),
   barrelRed: new THREE.MeshToonMaterial({ color: 0xe63946 }),
   barrelYellow: new THREE.MeshToonMaterial({ color: 0xffb703 }),
@@ -357,67 +359,126 @@ export function createWeaponMesh(weaponId: string): THREE.Group {
 /**
  * Creates 3D stylized palm tree matching the concept art
  */
-export function createPalmTree(): THREE.Group {
+/**
+ * Creates 3D stylized palm tree matching the concept art in idea.avif
+ */
+export function createPalmTree(leanAngle: number = 0.15): THREE.Group {
   const tree = new THREE.Group();
 
-  const trunkSegments = 5;
-  const height = 4.2;
-  const curveAngle = (Math.random() - 0.5) * 0.4;
+  // 1. Grassy root mound anchoring the tree on top of the rock
+  const moundGeo = new THREE.SphereGeometry(0.75, 8, 5);
+  moundGeo.scale(1, 0.35, 1);
+  const mound = new THREE.Mesh(moundGeo, MATS.camoGreen);
+  mound.position.set(0, 0.12, 0);
+  tree.add(mound);
+
+  // Small pebble at base
+  const pebbleGeo = new THREE.DodecahedronGeometry(0.22, 0);
+  const pebble = new THREE.Mesh(pebbleGeo, MATS.rockGrey);
+  pebble.position.set(0.38, 0.12, 0.2);
+  tree.add(pebble);
+
+  // 2. Chunky segmented coconut trunk with overlapping bulging beads
+  const trunkSegments = 7;
+  const height = 4.8;
+  const curveAngle = leanAngle;
 
   let currentY = 0;
   let currentX = 0;
-  for (let i = 0; i < trunkSegments; i++) {
-    const segH = height / trunkSegments;
-    const radiusBottom = 0.35 - (i * 0.035);
-    const radiusTop = radiusBottom - 0.03;
-    const segGeo = new THREE.CylinderGeometry(radiusTop, radiusBottom, segH, 8);
-    const seg = new THREE.Mesh(segGeo, MATS.palmTrunk);
+  const segH = height / trunkSegments;
 
+  for (let i = 0; i < trunkSegments; i++) {
+    const progress = i / trunkSegments;
+    const rBottom = 0.42 - progress * 0.14;
+    const rTop = rBottom - 0.04;
+
+    const segGeo = new THREE.CylinderGeometry(rTop, rBottom, segH, 9);
+    const seg = new THREE.Mesh(segGeo, MATS.palmTrunk);
     seg.position.set(currentX, currentY + segH / 2, 0);
-    seg.rotation.z = curveAngle * (i / trunkSegments);
+    seg.rotation.z = curveAngle * progress;
     tree.add(seg);
 
+    // Ring collar between segments (classic cartoon coconut palm texture)
+    const ringGeo = new THREE.TorusGeometry(rBottom + 0.03, 0.05, 5, 10);
+    const ring = new THREE.Mesh(ringGeo, MATS.palmTrunk);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(currentX, currentY, 0);
+    tree.add(ring);
+
     currentY += segH;
-    currentX += Math.sin(curveAngle) * 0.3;
+    currentX += Math.sin(curveAngle) * (segH * 0.9);
   }
 
-  const leafCount = 7;
-  const leafGroup = new THREE.Group();
-  leafGroup.position.set(currentX, currentY, 0);
+  // 3. Cluster of coconuts under the leaves
+  const coconutMat = new THREE.MeshToonMaterial({ color: 0x3d2314 });
+  const coconutOffsets = [
+    { x: -0.25, y: -0.15, z: 0.18 },
+    { x: 0.25, y: -0.12, z: 0.14 },
+    { x: 0.05, y: -0.22, z: -0.22 }
+  ];
+  for (const cOff of coconutOffsets) {
+    const cocoGeo = new THREE.SphereGeometry(0.22, 7, 6);
+    const coco = new THREE.Mesh(cocoGeo, coconutMat);
+    coco.position.set(currentX + cOff.x, currentY + cOff.y, cOff.z);
+    coco.scale.set(1, 1.15, 0.9);
+    tree.add(coco);
+  }
+
+  // 4. Lush, drooping cartoon palm fronds
+  const leafCount = 8;
+  const crownGroup = new THREE.Group();
+  crownGroup.position.set(currentX, currentY, 0);
 
   for (let i = 0; i < leafCount; i++) {
     const angle = (i / leafCount) * Math.PI * 2;
-    const leafGeo = new THREE.ConeGeometry(0.7, 2.2, 5);
-    const leaf = new THREE.Mesh(leafGeo, MATS.palmLeaves);
+    const leafArm = new THREE.Group();
+    leafArm.rotation.y = angle;
 
-    leaf.position.set(Math.cos(angle) * 1.0, -0.4, Math.sin(angle) * 1.0);
-    leaf.rotation.x = Math.sin(angle) * 1.1;
-    leaf.rotation.z = -Math.cos(angle) * 1.1;
-    leaf.scale.set(0.8, 1, 0.25);
-    leafGroup.add(leaf);
+    // Inner arch segment
+    const innerGeo = new THREE.BoxGeometry(0.55, 0.1, 1.6);
+    innerGeo.translate(0, 0, 0.8);
+    const inner = new THREE.Mesh(innerGeo, MATS.palmLeaves);
+    inner.rotation.x = -0.55;
+    leafArm.add(inner);
+
+    // Outer drooping tip
+    const outerGeo = new THREE.ConeGeometry(0.45, 1.8, 4);
+    outerGeo.rotateX(Math.PI / 2);
+    outerGeo.translate(0, 0, 0.9);
+    const outer = new THREE.Mesh(outerGeo, MATS.palmLeaves);
+    outer.position.set(0, 0.7, 1.4);
+    outer.rotation.x = 0.65;
+    outer.scale.set(1, 0.25, 1);
+    leafArm.add(outer);
+
+    crownGroup.add(leafArm);
   }
 
-  tree.add(leafGroup);
+  tree.add(crownGroup);
   return tree;
 }
 
 /**
- * Creates 3D stylized low-poly rock boulder
+ * Creates 3D stylized low-poly rock boulder matching concept art
  */
-export function createRock(scale: number = 1.0): THREE.Mesh {
+export function createRock(scale: number = 1.0, colorVariant: 'warm' | 'sandy' | 'grey' = 'sandy'): THREE.Mesh {
   const geo = new THREE.DodecahedronGeometry(0.8 * scale, 1);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     pos.setXYZ(
       i,
-      pos.getX(i) + (Math.random() - 0.5) * 0.15 * scale,
-      pos.getY(i) + (Math.random() - 0.5) * 0.15 * scale,
-      pos.getZ(i) + (Math.random() - 0.5) * 0.15 * scale
+      pos.getX(i) + (Math.random() - 0.5) * 0.22 * scale,
+      pos.getY(i) + (Math.random() - 0.5) * 0.22 * scale,
+      pos.getZ(i) + (Math.random() - 0.5) * 0.22 * scale
     );
   }
   geo.computeVertexNormals();
 
-  const rock = new THREE.Mesh(geo, MATS.rockGrey);
+  let mat = MATS.rockGrey;
+  if (colorVariant === 'warm') mat = MATS.rockWarm;
+  else if (colorVariant === 'grey') mat = MATS.rockClay;
+
+  const rock = new THREE.Mesh(geo, mat);
   rock.castShadow = true;
   rock.receiveShadow = true;
   return rock;
