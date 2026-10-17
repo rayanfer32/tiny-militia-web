@@ -78,6 +78,7 @@ export class Game {
   public isGameOver: boolean = false;
   public isPaused: boolean = false;
   public waveInProgress: boolean = false;
+  public testMode: boolean = false;
 
   public screenShake: number = 0;
   public camTarget: THREE.Vector3 = new THREE.Vector3(0, 0, 32);
@@ -188,6 +189,7 @@ export class Game {
 
       takeDamage: (amount: number, _attacker: string) => {
         if (this.isGameOver || !this.player) return;
+        if (this.testMode) return; // Immune to all damage in Test Mode
         this.player.health = Math.max(0, this.player.health - amount);
         this.particles.emitBloodSplatter(this.player.pos.x, this.player.pos.y + 0.6, 0);
         this.addScreenShake(0.3);
@@ -478,10 +480,19 @@ export class Game {
       boostThrust = true;
     }
 
-    if (boostThrust && p.jetpackFuel > 0) {
+    if (this.testMode) {
+      p.health = p.maxHealth;
+      p.jetpackFuel = p.maxFuel;
+    }
+
+    if (boostThrust && (p.jetpackFuel > 0 || this.testMode)) {
       p.isBoosting = true;
       p.vel.y += 44 * dt;
-      p.jetpackFuel = Math.max(0, p.jetpackFuel - 38 * dt);
+      if (!this.testMode) {
+        p.jetpackFuel = Math.max(0, p.jetpackFuel - 38 * dt);
+      } else {
+        p.jetpackFuel = p.maxFuel;
+      }
 
       sounds.startLoop('jet', 'player_jet', 0.4);
 
@@ -752,11 +763,15 @@ export class Game {
     const hpBar = document.getElementById('health-bar');
     if (hpBar) {
       hpBar.style.width = `${Math.max(0, this.player.health)}%`;
+      if (this.testMode) hpBar.classList.add('infinite-mode');
+      else hpBar.classList.remove('infinite-mode');
     }
 
     const boostBar = document.getElementById('boost-bar');
     if (boostBar) {
       boostBar.style.width = `${Math.max(0, this.player.jetpackFuel)}%`;
+      if (this.testMode) boostBar.classList.add('infinite-mode');
+      else boostBar.classList.remove('infinite-mode');
     }
 
     const currAmmo = document.getElementById('current-ammo');
@@ -881,6 +896,9 @@ export class Game {
       }
       if (e.code === 'KeyE') {
         this.swapOrPickupWeapon();
+      }
+      if (e.code === 'KeyT') {
+        this.toggleTestMode();
       }
     });
 
@@ -1024,9 +1042,37 @@ export class Game {
       btnRestart.addEventListener('click', () => window.location.reload());
     }
 
+    const btnTestMode = document.getElementById('btn-test-mode');
+    if (btnTestMode) {
+      btnTestMode.addEventListener('click', () => this.toggleTestMode());
+    }
+
     const btnPlayAgain = document.getElementById('btn-play-again');
     if (btnPlayAgain) {
       btnPlayAgain.addEventListener('click', () => window.location.reload());
     }
+  }
+
+  public toggleTestMode(): void {
+    this.testMode = !this.testMode;
+    const btn = document.getElementById('btn-test-mode');
+    const state = document.getElementById('test-mode-state');
+    if (btn && state) {
+      if (this.testMode) {
+        btn.classList.add('active');
+        state.textContent = 'ON';
+        this.showBanner('TEST MODE ACTIVATED', 'UNLIMITED HEALTH & JETPACK GAS ENABLED!');
+        sounds.play('boost', { volume: 0.9 });
+      } else {
+        btn.classList.remove('active');
+        state.textContent = 'OFF';
+        this.showBanner('TEST MODE DEACTIVATED', 'Standard survival rules restored.');
+      }
+    }
+    if (this.player && this.testMode) {
+      this.player.health = this.player.maxHealth;
+      this.player.jetpackFuel = this.player.maxFuel;
+    }
+    this.updateHUD();
   }
 }
