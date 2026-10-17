@@ -473,9 +473,6 @@ export class Game {
     if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX += 1;
     if (this.joysticks.move.active) moveX += this.joysticks.move.x;
 
-    const moveSpeed = 22;
-    p.vel.x += moveX * moveSpeed * dt;
-
     let boostThrust = (this.keys['KeyW'] || this.keys['Space'] || this.keys['ArrowUp']);
     if (this.joysticks.move.active && this.joysticks.move.y > 0.3) {
       boostThrust = true;
@@ -562,9 +559,36 @@ export class Game {
         sounds.play('dryfire', { volume: 0.5 });
       }
     }
+    // Movement integration & slope traversal
+    const walkSpeed = 9.0;
+    if (p.onGround && !p.isBoosting) {
+      if (Math.abs(moveX) > 0.05) {
+        // Walking along ground / slope: compute slope tangent pointing in move direction
+        const gn = this.physics.lastGroundNormal;
+        const tLen = Math.hypot(gn.y, -gn.x) || 1;
+        const tx = gn.y / tLen;
+        const ty = -gn.x / tLen;
 
-    p.vel.y -= 28 * dt;
-    p.vel.x *= 0.93;
+        // Drive velocity smoothly along the slope surface
+        p.vel.x = moveX * walkSpeed * tx;
+        p.vel.y = moveX * walkSpeed * ty;
+
+        // If moving flat or downhill, add a small downward bias to maintain ground contact
+        if (moveX * ty <= 0.05) {
+          p.vel.y -= 2.5;
+        }
+      } else {
+        // Standing still on slope: strong soldier footing to prevent downhill sliding
+        p.vel.x = 0;
+        p.vel.y = 0;
+      }
+    } else {
+      // In air (flying or falling)
+      p.vel.x += moveX * 24 * dt;
+      p.vel.x = Math.max(-10, Math.min(10, p.vel.x));
+      p.vel.y -= 28 * dt;
+      p.vel.x *= 0.96;
+    }
 
     p.pos.x += p.vel.x * dt;
     p.pos.y += p.vel.y * dt;

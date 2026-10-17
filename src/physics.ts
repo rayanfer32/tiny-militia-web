@@ -41,6 +41,7 @@ export class PhysicsEngine {
   public scale: number = 0.045;
   public mapPixelWidth: number = 3328;
   public mapPixelHeight: number = 1152;
+  public lastGroundNormal: Point2D = { x: 0, y: 1 };
 
   public toWorldX(px: number): number {
     return (px - this.mapPixelWidth / 2) * this.scale;
@@ -131,6 +132,9 @@ export class PhysicsEngine {
   // Resolve circle vs segments and polygons collision
   public resolveCircle(pos: Point2D, radius: number, vel: Point2D | null = null): boolean {
     let onGround = false;
+    let groundNormalX = 0;
+    let groundNormalY = 1;
+    let foundGround = false;
     const iterations = 4;
 
     for (let it = 0; it < iterations; it++) {
@@ -169,8 +173,11 @@ export class PhysicsEngine {
           pos.x = bestCx + bestNx * (radius + 0.05);
           pos.y = bestCy + bestNy * (radius + 0.05);
 
-          if (bestNy > 0.4) {
+          if (bestNy > 0.25) {
             onGround = true;
+            foundGround = true;
+            groundNormalX = bestNx;
+            groundNormalY = bestNy;
           }
 
           if (vel) {
@@ -211,8 +218,14 @@ export class PhysicsEngine {
           pos.x += nx * pen;
           pos.y += ny * pen;
 
-          if (ny > 0.4) {
+          if (ny > 0.25) {
             onGround = true;
+            // Prefer upward slopes or ground contact normals
+            if (!foundGround || Math.abs(nx) > Math.abs(groundNormalX) || ny > 0.5) {
+              foundGround = true;
+              groundNormalX = nx;
+              groundNormalY = ny;
+            }
           }
 
           if (vel) {
@@ -227,6 +240,11 @@ export class PhysicsEngine {
       }
 
       if (!collided) break;
+    }
+
+    if (onGround) {
+      this.lastGroundNormal.x = groundNormalX;
+      this.lastGroundNormal.y = groundNormalY;
     }
 
     return onGround;

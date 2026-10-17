@@ -159,11 +159,32 @@ export class Bot {
       this.updateAIState(dx, dy, dist);
     }
 
-    this.handleMovement(dt, dx, dy, dist);
+    const moveDir = this.handleMovement(dt, dx, dy, dist);
     this.handleCombat(dt, player, dist, spawnBullet);
 
-    this.vel.y -= 28 * dt;
-    this.vel.x *= 0.94;
+    const walkSpeed = 7.5;
+    if (this.onGround && !this.isBoosting) {
+      if (Math.abs(moveDir) > 0.05) {
+        const gn = this.physics.lastGroundNormal;
+        const tLen = Math.hypot(gn.y, -gn.x) || 1;
+        const tx = gn.y / tLen;
+        const ty = -gn.x / tLen;
+
+        this.vel.x = moveDir * walkSpeed * tx;
+        this.vel.y = moveDir * walkSpeed * ty;
+        if (moveDir * ty <= 0.05) {
+          this.vel.y -= 2.0;
+        }
+      } else {
+        this.vel.x = 0;
+        this.vel.y = 0;
+      }
+    } else {
+      this.vel.x += moveDir * 18 * dt;
+      this.vel.x = Math.max(-8, Math.min(8, this.vel.x));
+      this.vel.y -= 28 * dt;
+      this.vel.x *= 0.94;
+    }
 
     this.pos.x += this.vel.x * dt;
     this.pos.y += this.vel.y * dt;
@@ -191,8 +212,7 @@ export class Bot {
     }
   }
 
-  private handleMovement(dt: number, dx: number, dy: number, dist: number): void {
-    const moveSpeed = 16;
+  private handleMovement(dt: number, dx: number, dy: number, dist: number): number {
     this.isBoosting = false;
 
     let moveDir = 0;
@@ -210,8 +230,6 @@ export class Bot {
       this.strafeDir *= -1;
     }
 
-    this.vel.x += moveDir * moveSpeed * dt;
-
     const needsVerticalLift = dy > 1.5 || (!this.onGround && this.vel.y < -2);
     if (needsVerticalLift && this.jetpackFuel > 15) {
       this.isBoosting = true;
@@ -224,6 +242,8 @@ export class Bot {
         -0.2
       );
     }
+
+    return moveDir;
   }
 
   private handleCombat(
