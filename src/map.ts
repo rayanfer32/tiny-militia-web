@@ -91,8 +91,8 @@ export class OutpostMap {
       bevelEnabled: true,
       bevelSegments: 2,
       steps: 1,
-      bevelSize: 0.15,
-      bevelThickness: 0.15
+      bevelSize: 0.1,
+      bevelThickness: 0.1
     };
 
     polygons.forEach((poly) => {
@@ -111,18 +111,11 @@ export class OutpostMap {
       shape.closePath();
 
       const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-      geom.center();
 
-      let cx = 0, cy = 0;
-      for (const p of worldPts) {
-        cx += p.x;
-        cy += p.y;
-      }
-      cx /= worldPts.length;
-      cy /= worldPts.length;
-
+      // Do NOT center geom: keeps coordinates 1:1 with collision segments
       const mesh = new THREE.Mesh(geom, this.rockMat);
-      mesh.position.set(cx, cy, -0.2);
+      // Place rock behind player plane (front face at -3.7 + 3.5 + 0.1 = -0.1)
+      mesh.position.set(0, 0, -3.7);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.mapGroup.add(mesh);
@@ -134,20 +127,22 @@ export class OutpostMap {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const len = Math.hypot(dx, dy);
+        if (len < 0.1) continue;
 
-        if (dy / len < 0.35 && dx > 0) {
-          const grassBoxGeo = new THREE.BoxGeometry(len, 0.45, 3.8);
+        // In CW polygons, normal ny = dx / len. Surfaces with dx / len > 0.35 are walk-on ground
+        if (dx / len > 0.35) {
+          const grassBoxGeo = new THREE.BoxGeometry(len + 0.15, 0.35, 3.6);
           const grass = new THREE.Mesh(grassBoxGeo, this.grassMat);
-          grass.position.set((p1.x + p2.x) / 2, (p1.y + p2.y) / 2 + 0.15, -0.2);
+          grass.position.set((p1.x + p2.x) / 2, (p1.y + p2.y) / 2 + 0.05, -1.95);
           grass.rotation.z = Math.atan2(dy, dx);
           this.mapGroup.add(grass);
 
-          if (Math.random() < 0.6 && len > 3) {
-            const rock = createRock(0.4 + Math.random() * 0.4);
+          if (Math.random() < 0.5 && len > 3) {
+            const rock = createRock(0.3 + Math.random() * 0.3);
             rock.position.set(
               p1.x + (Math.random() * 0.6 + 0.2) * dx,
-              p1.y + 0.3,
-              0.5 + (Math.random() - 0.5) * 1.5
+              p1.y + 0.15,
+              -0.5 + (Math.random() - 0.5) * 0.2
             );
             this.mapGroup.add(rock);
           }
@@ -168,7 +163,7 @@ export class OutpostMap {
 
     palmPositions.forEach(pos => {
       const palm = createPalmTree();
-      palm.position.set(pos.x, pos.y, -0.5);
+      palm.position.set(pos.x, pos.y, -2.0);
       palm.scale.set(1.1, 1.1, 1.1);
       this.mapGroup.add(palm);
     });
@@ -178,11 +173,13 @@ export class OutpostMap {
     const hillMat = new THREE.MeshToonMaterial({ color: 0x386641 });
     const distantHillMat = new THREE.MeshToonMaterial({ color: 0x2d6a4f, transparent: true, opacity: 0.85 });
 
+    // Distant background mountains safely set far behind gameplay plane
     for (let i = -4; i <= 4; i++) {
-      const hillGeo = new THREE.SphereGeometry(22 + Math.random() * 8, 16, 12);
+      const radius = 24 + Math.random() * 8;
+      const hillGeo = new THREE.SphereGeometry(radius, 16, 12);
       const hill = new THREE.Mesh(hillGeo, (i % 2 === 0) ? hillMat : distantHillMat);
-      hill.position.set(i * 24 + Math.random() * 6, -26 + Math.random() * 4, -18 - Math.random() * 10);
-      hill.scale.set(1.4, 0.7, 1);
+      hill.position.set(i * 24 + Math.random() * 6, -26 + Math.random() * 4, -55 - Math.random() * 10);
+      hill.scale.set(1.5, 0.65, 0.25);
       this.mapGroup.add(hill);
     }
 
@@ -209,7 +206,7 @@ export class OutpostMap {
       cloudGroup.position.set(
         (Math.random() - 0.5) * 160,
         15 + Math.random() * 18,
-        -12 - Math.random() * 16
+        -25 - Math.random() * 15
       );
 
       this.mapGroup.add(cloudGroup);

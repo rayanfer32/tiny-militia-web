@@ -112,14 +112,79 @@ export class PhysicsEngine {
     console.log(`Loaded ${this.polygons.length} polygons and ${this.segments.length} collision segments.`);
   }
 
-  // Resolve circle vs segments collision
+  // Point in polygon test (ray casting algorithm)
+  public isPointInPolygon(p: Point2D, poly: Point2D[]): boolean {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x;
+      const yi = poly[i].y;
+      const xj = poly[j].x;
+      const yj = poly[j].y;
+      const intersect =
+        yi > p.y !== yj > p.y &&
+        p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi;
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Resolve circle vs segments and polygons collision
   public resolveCircle(pos: Point2D, radius: number, vel: Point2D | null = null): boolean {
     let onGround = false;
-    const iterations = 3;
+    const iterations = 4;
 
     for (let it = 0; it < iterations; it++) {
       let collided = false;
 
+      // 1. Eject if center has penetrated inside any terrain polygon
+      for (const poly of this.polygons) {
+        if (poly.length >= 3 && this.isPointInPolygon(pos, poly)) {
+          let bestDistSq = Infinity;
+          let bestCx = pos.x;
+          let bestCy = pos.y;
+          let bestNx = 0;
+          let bestNy = 1;
+
+          for (let i = 0; i < poly.length; i++) {
+            const p1 = poly[i];
+            const p2 = poly[(i + 1) % poly.length];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq < 0.0001) continue;
+            const t = Math.max(0, Math.min(1, ((pos.x - p1.x) * dx + (pos.y - p1.y) * dy) / lenSq));
+            const cx = p1.x + t * dx;
+            const cy = p1.y + t * dy;
+            const dSq = (pos.x - cx) ** 2 + (pos.y - cy) ** 2;
+            if (dSq < bestDistSq) {
+              bestDistSq = dSq;
+              bestCx = cx;
+              bestCy = cy;
+              const len = Math.sqrt(lenSq);
+              bestNx = -dy / len;
+              bestNy = dx / len;
+            }
+          }
+
+          pos.x = bestCx + bestNx * (radius + 0.05);
+          pos.y = bestCy + bestNy * (radius + 0.05);
+
+          if (bestNy > 0.4) {
+            onGround = true;
+          }
+
+          if (vel) {
+            const dot = vel.x * bestNx + vel.y * bestNy;
+            if (dot < 0) {
+              vel.x -= dot * bestNx;
+              vel.y -= dot * bestNy;
+            }
+          }
+          collided = true;
+        }
+      }
+
+      // 2. Segment boundary collision
       for (const seg of this.segments) {
         const vx = pos.x - seg.p1.x;
         const vy = pos.y - seg.p1.y;
@@ -127,18 +192,26 @@ export class PhysicsEngine {
         const closestX = seg.p1.x + t * seg.dx;
         const closestY = seg.p1.y + t * seg.dy;
 
-        const distSq = (pos.x - closestX) ** 2 + (pos.y - closestY) ** 2;
-        if (distSq < radius * radius && distSq > 0.00001) {
-          const dist = Math.sqrt(distSq);
-          const pen = radius - dist;
-          const nx = (pos.x - closestX) / dist;
-          const ny = (pos.y - closestY) / dist;
+        const diffX = pos.x - closestX;
+        const diffY = pos.y - closestY;
+        const distSq = diffX * diffX + diffY * diffY;
 
-          // Push out
+        if (distSq < radius * radius) {
+          const dist = Math.sqrt(distSq);
+          let nx = dist > 0.0001 ? diffX / dist : seg.nx;
+          let ny = dist > 0.0001 ? diffY / dist : seg.ny;
+
+          // Crucial: ensure normal always pushes outwards away from rock
+          if (nx * seg.nx + ny * seg.ny < 0) {
+            nx = seg.nx;
+            ny = seg.ny;
+          }
+
+          const pen = radius - dist;
           pos.x += nx * pen;
           pos.y += ny * pen;
 
-          if (ny > 0.5) {
+          if (ny > 0.4) {
             onGround = true;
           }
 
