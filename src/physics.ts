@@ -86,14 +86,13 @@ export class PhysicsEngine {
       }
     }
 
-    // Add map boundary walls so players/bullets don't escape outside
+    // Add map boundary walls on left, right, and top (NO bottom floor so entities freefall into the abyss)
     const hw = (this.mapPixelWidth / 2) * this.scale + 2;
     const hh = (this.mapPixelHeight / 2) * this.scale + 2;
     const bounds: [Point2D, Point2D][] = [
-      [{ x: -hw, y: -hh }, { x: hw, y: -hh }], // bottom
-      [{ x: hw, y: -hh }, { x: hw, y: hh }],   // right
-      [{ x: hw, y: hh }, { x: -hw, y: hh }],   // top
-      [{ x: -hw, y: hh }, { x: -hw, y: -hh }]  // left
+      [{ x: hw, y: -hh - 40 }, { x: hw, y: hh }],   // right wall
+      [{ x: hw, y: hh }, { x: -hw, y: hh }],         // top ceiling
+      [{ x: -hw, y: hh }, { x: -hw, y: -hh - 40 }]  // left wall
     ];
     for (const [p1, p2] of bounds) {
       const dx = p2.x - p1.x;

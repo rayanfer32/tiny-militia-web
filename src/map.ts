@@ -257,7 +257,13 @@ export class OutpostMap {
       }
     }
 
-    for (const pickup of this.pickups) {
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      const pickup = this.pickups[i];
+      if (pickup.position.y < -28) {
+        this.scene.remove(pickup);
+        this.pickups.splice(i, 1);
+        continue;
+      }
       pickup.userData.hoverTime += dt * 3;
       pickup.position.y = pickup.userData.startY + Math.sin(pickup.userData.hoverTime) * 0.15;
       pickup.rotation.y += dt * 1.5;

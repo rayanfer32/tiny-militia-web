@@ -606,6 +606,12 @@ export class Game {
 
     p.onGround = this.physics.resolveCircle(p.pos, p.radius, p.vel);
 
+    // Abyss freefall death check
+    if (p.pos.y < -28) {
+      this.triggerAbyssDeath();
+      return;
+    }
+
     p.model.root.position.set(p.pos.x, p.pos.y, 0);
     p.model.animateWalk(p.vel.x, p.isBoosting || !p.onGround);
 
@@ -801,6 +807,15 @@ export class Game {
     }
   }
 
+  private triggerAbyssDeath(): void {
+    if (this.isGameOver || !this.player) return;
+    this.player.health = 0;
+    this.updateHUD();
+    this.addKillfeed('The Abyss', 'Player', 'Freefall');
+    this.showBanner('FELL INTO THE ABYSS', 'WATCH YOUR STEP, SOLDIER!');
+    this.triggerGameOver();
+  }
+
   private triggerGameOver(): void {
     this.isGameOver = true;
     sounds.playRandomDeath();
@@ -841,6 +856,10 @@ export class Game {
 
     if (this.player) {
       for (const bot of this.bots) {
+        if (bot.pos.y < -28 && !bot.isDead) {
+          bot.takeDamage(9999, this.map);
+          this.addKillfeed('The Abyss', 'Militia Bot', 'Freefall');
+        }
         bot.update(dt, this.player, (opts) => this.spawnBullet(opts), this.map);
       }
     }
