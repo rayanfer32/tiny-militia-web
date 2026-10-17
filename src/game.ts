@@ -85,6 +85,21 @@ export class Game {
 
   public keys: Record<string, boolean> = {};
   public mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
+  public isPointerLocked: boolean = false;
+  public crosshair = {
+    x: typeof window !== 'undefined' ? window.innerWidth / 2 : 0,
+    y: typeof window !== 'undefined' ? window.innerHeight / 2 : 0
+  };
+  private targetIndicatorElem: HTMLElement | null = null;
+  private reticleCoreElem: HTMLElement | null = null;
+  private reticleHitmarkerElem: HTMLElement | null = null;
+  private reticleReloadSvg: SVGElement | null = null;
+  private reloadProgressCircle: SVGCircleElement | null = null;
+  private pointerLockPromptElem: HTMLElement | null = null;
+  private hitmarkerTimer: number = 0;
+  private reticleRecoil: number = 0;
+  private isUsingTouch: boolean = false;
+
   public joysticks: { move: JoystickState; aim: JoystickState } = {
     move: { active: false, x: 0, y: 0 },
     aim: { active: false, x: 0, y: 0 }
@@ -159,6 +174,11 @@ export class Game {
     this.lastTime = performance.now();
     this.animate = this.animate.bind(this);
     requestAnimationFrame(this.animate);
+
+    if (this.targetIndicatorElem && !this.isUsingTouch) {
+      this.targetIndicatorElem.classList.remove('hidden');
+    }
+    this.requestPointerLock();
   }
 
   private spawnPlayer(): void {
@@ -544,6 +564,7 @@ export class Game {
 
       sounds.play(p.weapon.def.sound, { volume: 0.95 });
       this.addScreenShake(p.weapon.def.isRocket ? 0.45 : 0.12);
+      this.reticleRecoil = 1.0;
 
       const worldAim = p.aimAngle;
       const muzzleX = p.pos.x + Math.cos(worldAim) * 0.95;
@@ -687,6 +708,7 @@ export class Game {
             } else {
               bot.takeDamage(b.damage, this.map, (deadBot) => this.onBotKilled(deadBot, this.player?.weapon.def.name || 'Rifle'));
             }
+            this.triggerHitmarker();
             this.scene.remove(b.mesh);
             this.bullets.splice(i, 1);
             hitBot = true;
@@ -823,6 +845,10 @@ export class Game {
 
   private triggerGameOver(): void {
     this.isGameOver = true;
+    this.exitPointerLock();
+    if (this.targetIndicatorElem) this.targetIndicatorElem.classList.add('hidden');
+    if (this.pointerLockPromptElem) this.pointerLockPromptElem.classList.add('hidden');
+    document.body.classList.remove('pointer-locked');
     sounds.playRandomDeath();
 
     const goModal = document.getElementById('gameover-overlay');
@@ -876,8 +902,102 @@ export class Game {
     this.map.update(dt);
 
     this.updateCamera(dt);
+    this.updateTargetIndicator(dt);
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  public requestPointerLock(): void {
+    if (this.isPaused || this.isGameOver || this.isUsingTouch) return;
+    try {
+      const promise = this.canvas.requestPointerLock() as any;
+      if (promise && typeof promise.catch === 'function') {
+        promise.catch(() => {});
+      }
+    } catch {
+      // Ignore if user rejects or platform unsupported
+    }
+  }
+
+  public exitPointerLock(): void {
+    try {
+      if (document.pointerLockElement === this.canvas && document.exitPointerLock) {
+        document.exitPointerLock();
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  public pauseGame(): void {
+    if (this.isGameOver) return;
+    this.isPaused = true;
+    const pauseModal = document.getElementById('pause-overlay');
+    if (pauseModal) pauseModal.classList.remove('hidden');
+    this.exitPointerLock();
+    if (this.targetIndicatorElem) this.targetIndicatorElem.classList.add('hidden');
+    if (this.pointerLockPromptElem) this.pointerLockPromptElem.classList.add('hidden');
+    document.body.classList.remove('pointer-locked');
+  }
+
+  public resumeGame(): void {
+    if (this.isGameOver) return;
+    this.isPaused = false;
+    const pauseModal = document.getElementById('pause-overlay');
+    if (pauseModal) pauseModal.classList.add('hidden');
+    if (this.targetIndicatorElem && !this.isUsingTouch) {
+      this.targetIndicatorElem.classList.remove('hidden');
+    }
+    this.requestPointerLock();
+  }
+
+  public triggerHitmarker(): void {
+    this.hitmarkerTimer = 0.12;
+    if (this.reticleHitmarkerElem) {
+      this.reticleHitmarkerElem.classList.add('active');
+    }
+  }
+
+  public updateTargetIndicator(dt: number): void {
+    if (!this.targetIndicatorElem || this.isUsingTouch || this.isPaused || this.isGameOver) {
+      if (this.targetIndicatorElem) this.targetIndicatorElem.classList.add('hidden');
+      return;
+    }
+
+    this.targetIndicatorElem.classList.remove('hidden');
+    this.targetIndicatorElem.style.transform = `translate3d(${Math.round(this.crosshair.x)}px, ${Math.round(this.crosshair.y)}px, 0)`;
+
+    // Recoil recovery
+    if (this.reticleRecoil > 0) {
+      this.reticleRecoil = Math.max(0, this.reticleRecoil - dt * 7.5);
+    }
+
+    // Spread scaling based on player's current weapon definition
+    if (this.player && this.reticleCoreElem) {
+      const spread = this.player.weapon.def.spread || 0.05;
+      const baseScale = 0.85 + (spread / 0.16) * 0.45;
+      const totalScale = baseScale + this.reticleRecoil * 0.35;
+      this.reticleCoreElem.style.transform = `scale(${totalScale.toFixed(3)})`;
+    }
+
+    // Hitmarker timer
+    if (this.hitmarkerTimer > 0) {
+      this.hitmarkerTimer -= dt;
+      if (this.hitmarkerTimer <= 0 && this.reticleHitmarkerElem) {
+        this.reticleHitmarkerElem.classList.remove('active');
+      }
+    }
+
+    // Reload progress ring
+    if (this.player && this.player.weapon.isReloading && this.reticleReloadSvg && this.reloadProgressCircle) {
+      this.reticleReloadSvg.classList.remove('hidden');
+      const duration = this.player.weapon.def.reloadTime || 1;
+      const progress = Math.max(0, Math.min(1, this.player.weapon.reloadProgress / duration));
+      const circumference = 125.66;
+      this.reloadProgressCircle.style.strokeDashoffset = `${(circumference * (1 - progress)).toFixed(1)}`;
+    } else if (this.reticleReloadSvg) {
+      this.reticleReloadSvg.classList.add('hidden');
+    }
   }
 
   private updateMouseWorldPos(): void {
@@ -895,14 +1015,44 @@ export class Game {
   }
 
   private setupEventListeners(): void {
+    document.addEventListener('pointerlockchange', () => {
+      this.isPointerLocked = (document.pointerLockElement === this.canvas);
+      if (this.isPointerLocked) {
+        document.body.classList.add('pointer-locked');
+        if (this.pointerLockPromptElem) this.pointerLockPromptElem.classList.add('hidden');
+      } else {
+        document.body.classList.remove('pointer-locked');
+        if (!this.isPaused && !this.isGameOver && !this.isUsingTouch && this.pointerLockPromptElem) {
+          this.pointerLockPromptElem.classList.remove('hidden');
+        }
+      }
+    });
+
+    this.canvas.addEventListener('click', () => {
+      if (!this.isPaused && !this.isGameOver && !this.isPointerLocked && !this.isUsingTouch) {
+        this.requestPointerLock();
+      }
+    });
+
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.crosshair.x = Math.min(this.crosshair.x, window.innerWidth);
+      this.crosshair.y = Math.min(this.crosshair.y, window.innerHeight);
     });
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
       this.keys[e.code] = true;
+
+      if (e.code === 'Escape') {
+        if (this.isPaused) {
+          this.resumeGame();
+        } else if (!this.isGameOver) {
+          this.pauseGame();
+        }
+        return;
+      }
 
       if (e.code === 'KeyG' || e.code === 'KeyQ') {
         if (this.player) {
@@ -931,14 +1081,26 @@ export class Game {
     });
 
     window.addEventListener('mousemove', (e: MouseEvent) => {
-      this.mouse.x = e.clientX;
-      this.mouse.y = e.clientY;
+      this.isUsingTouch = false;
+      if (this.isPointerLocked) {
+        this.crosshair.x = Math.max(0, Math.min(window.innerWidth, this.crosshair.x + e.movementX));
+        this.crosshair.y = Math.max(0, Math.min(window.innerHeight, this.crosshair.y + e.movementY));
+      } else {
+        this.crosshair.x = e.clientX;
+        this.crosshair.y = e.clientY;
+      }
+      this.mouse.x = this.crosshair.x;
+      this.mouse.y = this.crosshair.y;
       this.updateMouseWorldPos();
+      this.updateTargetIndicator(0);
     });
 
     window.addEventListener('mousedown', (e: MouseEvent) => {
       if (e.button === 0) {
         this.mouse.down = true;
+        if (!this.isPaused && !this.isGameOver && !this.isPointerLocked && !this.isUsingTouch) {
+          this.requestPointerLock();
+        }
       } else if (e.button === 2) {
         e.preventDefault();
         if (this.player) {
@@ -954,6 +1116,12 @@ export class Game {
     });
 
     window.addEventListener('contextmenu', (e: MouseEvent) => e.preventDefault());
+
+    window.addEventListener('touchstart', () => {
+      this.isUsingTouch = true;
+      if (this.targetIndicatorElem) this.targetIndicatorElem.classList.add('hidden');
+      if (this.pointerLockPromptElem) this.pointerLockPromptElem.classList.add('hidden');
+    }, { passive: true });
 
     this.setupTouchJoysticks();
   }
@@ -1045,22 +1213,28 @@ export class Game {
       }
     });
 
+    this.targetIndicatorElem = document.getElementById('target-indicator');
+    this.reticleCoreElem = document.getElementById('reticle-core');
+    this.reticleHitmarkerElem = document.getElementById('reticle-hitmarker');
+    this.reticleReloadSvg = document.getElementById('reticle-reload-svg') as unknown as SVGElement;
+    this.reloadProgressCircle = document.getElementById('reload-progress-circle') as unknown as SVGCircleElement;
+    this.pointerLockPromptElem = document.getElementById('pointer-lock-prompt');
+
+    if (this.pointerLockPromptElem) {
+      this.pointerLockPromptElem.addEventListener('click', () => {
+        this.requestPointerLock();
+      });
+    }
+
     const btnPause = document.getElementById('btn-pause');
-    const pauseModal = document.getElementById('pause-overlay');
     const btnResume = document.getElementById('btn-resume');
     const btnRestart = document.getElementById('btn-restart');
 
-    if (btnPause && pauseModal) {
-      btnPause.addEventListener('click', () => {
-        this.isPaused = true;
-        pauseModal.classList.remove('hidden');
-      });
+    if (btnPause) {
+      btnPause.addEventListener('click', () => this.pauseGame());
     }
-    if (btnResume && pauseModal) {
-      btnResume.addEventListener('click', () => {
-        this.isPaused = false;
-        pauseModal.classList.add('hidden');
-      });
+    if (btnResume) {
+      btnResume.addEventListener('click', () => this.resumeGame());
     }
     if (btnRestart) {
       btnRestart.addEventListener('click', () => window.location.reload());

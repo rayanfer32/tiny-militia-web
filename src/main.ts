@@ -13,6 +13,7 @@ window.addEventListener('DOMContentLoaded', () => {
       startOverlay.classList.add('hidden');
       game = new Game(canvas);
       game.start();
+      game.requestPointerLock();
     });
   }
 });

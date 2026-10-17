@@ -826,8 +826,242 @@ html, body {
   display: none !important;
 }
 
+/* =========================================================
+   Custom Target Indicator & Crosshair Styles
+   ========================================================= */
+body.pointer-locked,
+body.pointer-locked * {
+  cursor: none !important;
+}
+
+#game-canvas {
+  cursor: crosshair;
+}
+
+body.pointer-locked #game-canvas {
+  cursor: none !important;
+}
+
+.target-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  will-change: transform;
+}
+
+.reticle-wrapper {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+}
+
+.reticle-core {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.05s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  will-change: transform;
+}
+
+.reticle-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 240, 255, 0.85);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6), inset 0 0 6px rgba(0, 240, 255, 0.25);
+}
+
+.reticle-tick {
+  position: absolute;
+  background: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff, 0 0 2px #000;
+  border-radius: 1px;
+}
+
+.tick-top {
+  width: 2px;
+  height: 7px;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tick-bottom {
+  width: 2px;
+  height: 7px;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tick-left {
+  height: 2px;
+  width: 7px;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tick-right {
+  height: 2px;
+  width: 7px;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.reticle-dot {
+  width: 4px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  box-shadow: 0 0 4px #00f0ff, 0 0 0 1px rgba(0, 0, 0, 0.85);
+}
+
+/* Hitmarker (X tick marks) */
+.reticle-hitmarker {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease-out, transform 0.08s ease-out;
+}
+
+.reticle-hitmarker.active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.18);
+}
+
+.hm-line {
+  position: absolute;
+  width: 7px;
+  height: 2px;
+  background: #ff2a55;
+  box-shadow: 0 0 6px #ff2a55, 0 0 1px #fff;
+  border-radius: 1px;
+}
+
+.hm-tl {
+  top: 2px;
+  left: 2px;
+  transform: rotate(45deg);
+}
+
+.hm-tr {
+  top: 2px;
+  right: 2px;
+  transform: rotate(-45deg);
+}
+
+.hm-bl {
+  bottom: 2px;
+  left: 2px;
+  transform: rotate(-45deg);
+}
+
+.hm-br {
+  bottom: 2px;
+  right: 2px;
+  transform: rotate(45deg);
+}
+
+/* Circular Reload Progress Arc */
+.reticle-reload-svg {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(249, 199, 79, 0.75));
+}
+
+.reload-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.15);
+  stroke-width: 2.5;
+}
+
+.reload-bar {
+  fill: none;
+  stroke: #ffbe0b;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 125.66;
+  stroke-dashoffset: 125.66;
+  transition: stroke-dashoffset 0.04s linear;
+}
+
+/* Pointer Lock Prompt Pill */
+.pointer-lock-prompt {
+  position: absolute;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.pointer-lock-pill {
+  background: rgba(14, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 240, 255, 0.45);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-family: var(--font-hud);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #00f0ff;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 12px rgba(0, 240, 255, 0.2);
+  animation: promptPulse 2s infinite ease-in-out;
+  transition: all 0.2s ease;
+}
+
+.pointer-lock-pill:hover {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: #00f0ff;
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.4);
+}
+
+@keyframes promptPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 240, 255, 0.2);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 18px rgba(0, 240, 255, 0.4);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .target-indicator,
+  .pointer-lock-prompt {
+    display: none !important;
+  }
   .status-panel {
     min-width: 190px;
     padding: 6px 10px;

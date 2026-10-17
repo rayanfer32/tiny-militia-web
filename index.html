@@ -147,13 +147,48 @@
 
     <!-- Desktop Controls Hint Overlay -->
     <div id="desktop-hints" class="desktop-hints">
-      <span><strong>WASD / Arrows</strong> Move & Jetpack</span>
-      <span><strong>Mouse</strong> Aim & Shoot</span>
-      <span><strong>G / Q</strong> Grenade</span>
-      <span><strong>F</strong> Melee Punch</span>
+      <span><strong>WASD</strong> Move/Fly</span>
+      <span><strong>Mouse</strong> Aim & Fire</span>
+      <span><strong>ESC</strong> Pause/Unlock</span>
+      <span><strong>G/Q</strong> Grenade</span>
+      <span><strong>F</strong> Melee</span>
       <span><strong>R</strong> Reload</span>
-      <span><strong>E</strong> Pick/Swap Weapon</span>
-      <span><strong>T</strong> Test Mode (God/Gas)</span>
+      <span><strong>E</strong> Swap Weapon</span>
+      <span><strong>T</strong> Test Mode</span>
+    </div>
+
+    <!-- In-Game Combat Target Indicator / Reticle -->
+    <div id="target-indicator" class="target-indicator hidden">
+      <div class="reticle-wrapper">
+        <div class="reticle-core" id="reticle-core">
+          <div class="reticle-ring"></div>
+          <div class="reticle-tick tick-top"></div>
+          <div class="reticle-tick tick-bottom"></div>
+          <div class="reticle-tick tick-left"></div>
+          <div class="reticle-tick tick-right"></div>
+          <div class="reticle-dot"></div>
+        </div>
+        <!-- Hitmarker Indicator (X tick marks) -->
+        <div id="reticle-hitmarker" class="reticle-hitmarker">
+          <span class="hm-line hm-tl"></span>
+          <span class="hm-line hm-tr"></span>
+          <span class="hm-line hm-bl"></span>
+          <span class="hm-line hm-br"></span>
+        </div>
+        <!-- Circular Reload Progress Arc -->
+        <svg id="reticle-reload-svg" class="reticle-reload-svg hidden" viewBox="0 0 48 48">
+          <circle class="reload-track" cx="24" cy="24" r="20" />
+          <circle id="reload-progress-circle" class="reload-bar" cx="24" cy="24" r="20" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Pointer Lock Prompt / Click to Lock Banner -->
+    <div id="pointer-lock-prompt" class="pointer-lock-prompt hidden">
+      <div class="pointer-lock-pill">
+        <span class="prompt-icon">🎯</span>
+        <span class="prompt-text">CLICK TO CAPTURE MOUSE [ESC TO UNLOCK]</span>
+      </div>
     </div>
   </div>
 
@@ -176,7 +211,8 @@
           <strong>DESKTOP</strong>
           <div>W / Space: Jetpack Fly</div>
           <div>A / D: Run Left / Right</div>
-          <div>Mouse: Aim & Shoot</div>
+          <div>Mouse: Aim & Shoot (Captured)</div>
+          <div>ESC: Pause / Release Cursor</div>
           <div>G / Q: Grenade | F: Melee</div>
         </div>
         <div class="ctrl-col">
