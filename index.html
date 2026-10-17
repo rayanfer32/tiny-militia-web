@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tiny Militia - 3D Doodle Combat (Single Player Survival)</title>
+  <link rel="stylesheet" href="/src/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- 3D Canvas Container -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+
+  <!-- In-Game Sci-Fi Combat HUD (inspired by idea.avif) -->
+  <div id="hud" class="hud-layer">
+    <!-- Top Left: Health & Jetpack Boost -->
+    <div class="hud-top-left">
+      <div class="hud-glass-panel status-panel">
+        <div class="stat-row">
+          <div class="stat-icon health-icon" title="Health">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </div>
+          <div class="meter-bar-wrapper">
+            <div id="health-bar" class="meter-fill health-fill" style="width: 100%;"></div>
+          </div>
+          <button id="btn-pause" class="btn-hud-icon" title="Pause Game">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+        </div>
+        <div class="stat-row">
+          <div class="stat-icon jet-icon" title="Jetpack Boost">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5s3 3 3 7.5c0 3-1.5 5.5-3 8-1.5-2.5-3-5-3-8 0-4.5 3-7.5 3-7.5zM12 22c-1.1 0-2-.9-2-2h4c0 1.1-.9 2-2 2z"/></svg>
+          </div>
+          <div class="meter-bar-wrapper">
+            <div id="boost-bar" class="meter-fill boost-fill" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Center: Match Clock & Wave Tracker -->
+    <div class="hud-top-center">
+      <div class="wave-badge">
+        <span class="wave-title" id="wave-title">WAVE 1</span>
+        <span class="wave-sub" id="wave-sub">SURVIVAL</span>
+      </div>
+      <div class="hud-glass-panel clock-panel">
+        <span id="match-timer">05:00</span>
+      </div>
+      <div class="score-display">
+        <span>SCORE: <strong id="score-val">0</strong></span>
+        <span class="kills-tag">KILLS: <strong id="kills-val">0</strong></span>
+      </div>
+    </div>
+
+    <!-- Top Right: Weapon Silhouette, Ammo & Grenades -->
+    <div class="hud-top-right">
+      <div class="hud-glass-panel weapon-panel">
+        <div class="weapon-info">
+          <div class="weapon-name" id="weapon-name">AK-47</div>
+          <div class="ammo-counter">
+            <span id="current-ammo" class="ammo-curr">030</span>
+            <span class="ammo-sep">/</span>
+            <span id="reserve-ammo" class="ammo-res">090</span>
+          </div>
+        </div>
+        <div class="weapon-graphic" id="weapon-graphic">
+          <!-- Procedural SVG weapon outline -->
+          <svg id="weapon-svg" viewBox="0 0 100 40">
+            <path d="M10 25 L40 25 L45 20 L85 20 L90 23 L85 27 L45 27 L35 38 L25 38 L28 27 L10 27 Z" fill="#fff" opacity="0.85"/>
+          </svg>
+        </div>
+        <div class="grenade-slot" id="btn-throw-grenade" title="Throw Grenade [G / Click]">
+          <div class="grenade-icon">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a3 3 0 0 0-3 3v1.17A7.001 7.001 0 0 0 5 13a7 7 0 0 0 14 0 7.001 7.001 0 0 0-4-6.83V5a3 3 0 0 0-3-3zm0 2a1 1 0 0 1 1 1v1h-2V5a1 1 0 0 1 1-1zm0 4a5 5 0 0 1 5 5 5 5 0 0 1-10 0 5 5 0 0 1 5-5z"/></svg>
+          </div>
+          <span id="grenade-count">3</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Event / Announcement Banner -->
+    <div id="event-banner" class="event-banner hidden">
+      <h2 id="banner-title">WAVE 1</h2>
+      <p id="banner-desc">INCOMING HOSTILES!</p>
+    </div>
+
+    <!-- Sarge Radio Callout Notification -->
+    <div id="sarge-box" class="sarge-box hidden">
+      <div class="sarge-avatar">★</div>
+      <div class="sarge-msg">
+        <div class="sarge-speaker">SARGE:</div>
+        <div id="sarge-text">Come on boy! Show 'em what you got!</div>
+      </div>
+    </div>
+
+    <!-- Killfeed on left -->
+    <div id="killfeed" class="killfeed"></div>
+
+    <!-- On-screen Virtual Joysticks & Action Buttons for Mobile / Touch -->
+    <div id="touch-controls" class="touch-controls">
+      <!-- Left Joystick: Move & Jetpack thrust -->
+      <div id="joystick-left" class="joystick-zone">
+        <div class="joystick-base">
+          <div class="joystick-nub" id="nub-left"></div>
+          <span class="stick-label">MOVE / FLY</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons floating center-bottom -->
+      <div class="touch-actions">
+        <button id="btn-touch-melee" class="action-btn melee-btn" title="Melee Strike [F]">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.07 4.93a10 10 0 0 0-14.14 0c-3.9 3.9-3.9 10.24 0 14.14a10 10 0 0 0 14.14 0c3.9-3.9 3.9-10.24 0-14.14zm-7.07 14.07a7 7 0 1 1 0-14 7 7 0 0 1 0 14zm1-11h-2v4H7l5 5 5-5h-4z"/></svg>
+          <span>PUNCH</span>
+        </button>
+        <button id="btn-touch-reload" class="action-btn reload-btn" title="Reload [R]">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          <span>RELOAD</span>
+        </button>
+        <button id="btn-touch-swap" class="action-btn swap-btn" title="Switch / Pickup [E]">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+          <span>SWAP</span>
+        </button>
+      </div>
+
+      <!-- Right Joystick: Aim & Shoot -->
+      <div id="joystick-right" class="joystick-zone">
+        <div class="joystick-base aim-base">
+          <div class="joystick-nub" id="nub-right"></div>
+          <span class="stick-label">AIM & FIRE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Controls Hint Overlay -->
+    <div id="desktop-hints" class="desktop-hints">
+      <span><strong>WASD / Arrows</strong> Move & Jetpack</span>
+      <span><strong>Mouse</strong> Aim & Shoot</span>
+      <span><strong>G / Q</strong> Grenade</span>
+      <span><strong>F</strong> Melee Punch</span>
+      <span><strong>R</strong> Reload</span>
+      <span><strong>E</strong> Pick/Swap Weapon</span>
+    </div>
+  </div>
+
+  <!-- Main Menu / Start Screen -->
+  <div id="start-overlay" class="menu-overlay">
+    <div class="menu-card glass-panel">
+      <div class="menu-header">
+        <h1 class="game-logo">TINY MILITIA</h1>
+        <p class="tagline">DOODLE COMBAT: 3D OUTPOST SURVIVAL</p>
+      </div>
+      <div class="soldier-preview-badge">
+        <div class="badge-icon">🎖️</div>
+        <div class="badge-text">WAVE SURVIVAL MODE</div>
+      </div>
+      <p class="intro-desc">
+        Take control of your chibi soldier, fire up your rocket boots, and battle through relentless waves of enemy militia bots on the classic 3D Outpost cliffs!
+      </p>
+      <div class="controls-preview-grid">
+        <div class="ctrl-col">
+          <strong>DESKTOP</strong>
+          <div>W / Space: Jetpack Fly</div>
+          <div>A / D: Run Left / Right</div>
+          <div>Mouse: Aim & Shoot</div>
+          <div>G / Q: Grenade | F: Melee</div>
+        </div>
+        <div class="ctrl-col">
+          <strong>MOBILE / TOUCH</strong>
+          <div>Left Stick: Move & Boost</div>
+          <div>Right Stick: Aim & Fire</div>
+          <div>Touch Buttons: Grenade, Melee</div>
+        </div>
+      </div>
+      <button id="btn-start-game" class="btn-primary-action">
+        START MISSION
+      </button>
+    </div>
+  </div>
+
+  <!-- Pause Modal -->
+  <div id="pause-overlay" class="menu-overlay hidden">
+    <div class="menu-card glass-panel">
+      <h2>MISSION PAUSED</h2>
+      <div class="pause-actions">
+        <button id="btn-resume" class="btn-primary-action">RESUME</button>
+        <button id="btn-restart" class="btn-secondary-action">RESTART</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameover-overlay" class="menu-overlay hidden">
+    <div class="menu-card glass-panel gameover-card">
+      <h2 class="gameover-title">K.I.A. - MISSION OVER</h2>
+      <div class="stats-summary">
+        <div class="stat-box">
+          <span class="stat-label">WAVES SURVIVED</span>
+          <span class="stat-number" id="go-waves">0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">TOTAL KILLS</span>
+          <span class="stat-number" id="go-kills">0</span>
+        </div>
+        <div class="stat-box highlight">
+          <span class="stat-label">FINAL SCORE</span>
+          <span class="stat-number" id="go-score">0</span>
+        </div>
+      </div>
+      <button id="btn-play-again" class="btn-primary-action">
+        DEPLOY AGAIN
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

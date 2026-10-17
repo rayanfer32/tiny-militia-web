@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.2" tiledversion="1.3.1" orientation="orthogonal" renderorder="right-down" compressionlevel="0" width="30" height="20" tilewidth="64" tileheight="64" infinite="0" nextlayerid="5" nextobjectid="18">
+ <tileset firstgid="1" source="t64_new.tsx"/>
+ <layer id="1" name="tilebg" width="30" height="20">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAEE2NgGAWjITB4QuAC0CknBo9zhrxLWgj4gJA8Ae04pQmZS0gep8FESlwCqkPHRGodVTYaAqMhMBoCVAkBABp3+j9gCQAA
+  </data>
+ </layer>
+ <objectgroup id="2" name="objects">
+  <object id="3" name="sp_p_00" x="673" y="610"/>
+  <object id="15" name="wp_p_01" x="793.513" y="502.94">
+   <properties>
+    <property name="weapon" value="tavor"/>
+   </properties>
+  </object>
+  <object id="16" name="dr_p_01" type="Hawk" x="939.794" y="371.753">
+   <properties>
+    <property name="collision" type="bool" value="false"/>
+    <property name="state" value="Target"/>
+    <property name="waypoint" value="1"/>
+   </properties>
+  </object>
+  <object id="17" name="way_1" x="921.667" y="502.667">
+   <properties>
+    <property name="collision" type="bool" value="true"/>
+    <property name="state" value="Move"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <layer id="3" name="tile" width="30" height="20">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAEE+2Sz0pCURCHfYuyArFFtWqh0sJyUy5cCEa6EJEyU8HnsNLWQvS4foN3YDh6HDXvzoHvnj8z85tzztxM5mjHF1i+wIjhAwYwXG6l9j1HuQ9Sr2i4Z16FC0jDpohOAv6S9S/jDNKwT0fU8zvpUben6/mjwo4j1P0h3hL6HbkVd46dS8jDCYzhFL7B9nfO2vLFugD7Wp1E+V8fktH+u978jpwO1GAfa5GkNbz6JRMrOV1owzXIe8lbXcEN3MIms3cO64ZrPV9stPHPm4omvjKjaknuG7yaPfWtG20t8ctaeIFt7J2gR+iZYOlBqOvV1viG0dl1WiFhXZ3YntZs7looiNfeSx3RjL2/1tPz/OeuegR9a3sH6ckTaF+0R7LXg0NYFhHRPzuA2AJnN/UBYAkAAA==
+  </data>
+ </layer>
+ <objectgroup id="4" name="collision" locked="1">
+  <object id="8" name="co_poly" x="467" y="142">
+   <polygon points="45,241 621,241 619,562 110,562 110,498 301,498 301,467 557,467 557,305 109,305 109,562 45,562"/>
+  </object>
+ </objectgroup>
+</map>

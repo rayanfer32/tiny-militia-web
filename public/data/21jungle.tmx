@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" tiledversion="1.1.6" orientation="orthogonal" renderorder="right-down" width="50" height="40" tilewidth="64" tileheight="64" infinite="0" nextobjectid="1232">
+ <tileset firstgid="1" source="t64_new.tsx"/>
+ <layer name="tilebg2" width="50" height="40">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE+2W6wrDIAyF8/4vtg12g+5+eZdVtjArXdRqahjng/wLaY45xhIBAAAAoCWX1g1UYP+JZetGCtn28aS3Fm1WfSzoe3abH3lz9DKVsP+dkMt5VnG9PRLzOE6qHelxp6EOSzsoxyMdDXVY9pfEmA5tLa7+rXLNM43rSL1bOWjV9WuPRe6ZuTdlHakp1e0yvxdSexb8RroIdUl12eMllM5Cwt+JByHP93gpGv69Uvx8jlTHC9qkekpjl80J67A8ixT4bkj3x8f3qrW3O/e/iPdH7D/YOm6GpT60Nssp/IMGAAAAANTjBZY79j9AHwAA
+  </data>
+ </layer>
+ <layer name="tilebg" width="50" height="40">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE+2YUQ7CIAyGudNM9GWX8NSLTyZGp/EybpmNBAuUQqUYvqTxYQz6t7XAjOl0Op10xvfvsaoX5bH1jN5R9QCfBsRCaMmTHVOqBmyMFj1ATMeAjK0NNRfYs5DW/WIHAX9r4PaDWnVHjb2LdA+bjWxMsH7nkrv+dbFzoblsuLHn+nAxHx0589i4GmK9gFOjLrP5zjtA0SRV89R4xtYHTan54cQ7Nxchds7c2vZkH62dmWy4/zGNWlyoulrQ4gPT1rIeCnfme7++Y4Zq7mm2vXVa7JQwp7Y75MNsOsBuyBjqHbh23UJOVrNrzOez1r4J5zawKTA25nfMX0k9bm1J135IS+7aUFvrPCl1k3LOCu0DmP+c3NXqP5RYlfzWVuruUQIsT9zvdhJI3t2wdTSQq6lFLZp87nT+jReyFWqiQB8AAA==
+  </data>
+ </layer>
+ <layer name="tile" width="50" height="40">
+  <data encoding="base64" compression="gzip">
+   H4sIAAAAAAAAE+1Yy07DQAz0b8ClFMTzAEhU4tQDrYQQVEKCVjwEtPz/T7AramXi2rvOg5RDLPnQpNn12M54NkS99dZblzYIfhz8fNuBOI3jlR7jvyIdz4D+H74x/cabc8QbMTxtI1jFMM8c59H62glcH1Ea1zbrwn3hqQP6bfA3KmLfNh7sJSvfmn8E/4R18F6XfSZ7SfaTrFG8d0jlfjsNfkblvlsG3zX2+4s6ed9pr8f4VxDzRfBLKvNBW1hwnZ3gk+DT4F9GbPH/e8GHwfeDH1C5Tsv1Ghi/Vsu2e25Mdk6+AU/uPZG51+YMYsH12uAC7qVUfRGPzPsU4mcMOU7OzaA6eBjHiDbzqOHRekab86k+tLhhSNVmqFb3yP13Yv9UXurOmCp1SeVU2z/WgrkfMaXqPINnvRwgcyW5+5w2e9HibOwjLReM6ZXK3Kjh4T6zuM2ak1V5QzNtVnOeKIHNwwVTKt59xCdjxt9L5blU/GzcD9gDL1ToCU/vVuETrpmsWy7fHptTXqeyptX+14QfI65Vo+gLi3Pb29MYO+omjVdS/OKxuvmR863q3LK8js5AHm0Lj/cd0bBbPMmxamdgS3/V1V38Tmo6sSlPRkMNZM1/OY9kTerUKoWL9ZWHJ62cY8wLKvjlgeyayFzU5ZoY903F51Lny5y+kTWRZySPfmrKP7xOUx2GNdH0iPe9q8s/vM416ZpLe+dYW+A93H8G1xdkzwEtd1W+tXnOfylHDWblUeNXxC31qNbLuW9tlg7V1sIzyDttamF+7lHZx8Jj5SLluXMUarhcfXhvqSE9nDJPxMf7c0/HM5s8x7V5jpL1enbEz8bfR5poE+zF1LPWPe1sldIEOfNoEy0WPnNJDan9/57KM072chtaHvFMOnb5zaW33rq0H+hHtA5AHwAA
+  </data>
+ </layer>
+ <objectgroup name="objects">
+  <object id="242" name="spritefg" x="448" y="950">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="243" name="spritefg" x="384" y="950">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="245" name="spritefg" x="1344" y="246">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="246" name="spritefg" x="960" y="374">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="248" name="spritefg" x="3008" y="1526">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="249" name="spritefg" x="192" y="1590">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="250" name="spritefg" x="128" y="1590">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="991" name="spritefg" x="1568" y="1974">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="992" name="spritefg" x="1632" y="1974">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="993" name="spritefg" x="1696" y="1974">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="1086" name="spritefg" x="705" y="962">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1087" name="spritefg" x="772" y="963">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1088" name="spritefg" x="835" y="963">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1089" name="spritefg" x="965" y="1090">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1091" name="spritefg" x="1091" y="1156">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1093" name="spritefg" x="1348" y="1347">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1095" name="spritefg" x="1474" y="1410">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1096" name="spritefg" x="1540" y="1410">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1097" name="spritefg" x="1603" y="1410">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1098" name="spritefg" x="1667" y="1410">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1099" name="spritefg" x="1733" y="1410">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1101" name="spritefg" x="452" y="1025">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1102" name="spritefg" x="387" y="1025">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1103" name="spritefg" x="322" y="1025">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1107" name="spritefg" x="964" y="452">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1109" name="spritefg" x="1091" y="321">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1110" name="spritefg" x="1156" y="321">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1111" name="spritefg" x="1219" y="322">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1112" name="spritefg" x="1282" y="322">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1116" name="spritefg" x="1667" y="385">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1117" name="spritefg" x="1732" y="387">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1121" name="spritefg" x="2050" y="515">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1125" name="spritefg" x="2308" y="705">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1126" name="spritefg" x="2370" y="705">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1129" name="spritefg" x="2628" y="833">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1133" name="spritefg" x="2883" y="1025">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1134" name="spritefg" x="2947" y="1026">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1135" name="spritefg" x="3010" y="1025">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1136" name="spritefg" x="3075" y="1025">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1137" name="spritefg" x="2947" y="1475">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1138" name="spritefg" x="2882" y="1473">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1139" name="spritefg" x="2817" y="1410">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1140" name="spritefg" x="2755" y="1409">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1141" name="spritefg" x="2628" y="1539">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1142" name="spritefg" x="2563" y="1538">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1143" name="spritefg" x="2500" y="1602">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1144" name="spritefg" x="2436" y="1602">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1150" name="spritefg" x="1986" y="1859">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1151" name="spritefg" x="1924" y="1859">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1154" name="spritefg" x="1733" y="2050">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1155" name="spritefg" x="1668" y="2050">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1156" name="spritefg" x="1602" y="2050">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1157" name="spritefg" x="1538" y="2048">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1160" name="spritefg" x="1283" y="1987">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1161" name="spritefg" x="1219" y="1985">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1163" name="spritefg" x="1089" y="1922">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1169" name="spritefg" x="706" y="1922">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1170" name="spritefg" x="642" y="1924">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1171" name="spritefg" x="579" y="1924">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1177" name="spritefg" x="129" y="1665">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1185" name="spritefg" x="384" y="1717">
+   <properties>
+    <property name="sprite" value="palmTree"/>
+   </properties>
+  </object>
+  <object id="1187" name="sp_p" x="1702" y="137"/>
+  <object id="1188" name="sp_p" x="2624" y="609"/>
+  <object id="1189" name="sp_p" x="964" y="927"/>
+  <object id="1190" name="sp_p" x="640" y="1664"/>
+  <object id="1191" name="sp_p" x="1971" y="1651"/>
+  <object id="1192" name="sp_p" x="2606" y="1332"/>
+  <object id="1194" name="sp_p" x="960" y="220"/>
+  <object id="1196" name="wp_p" x="256" y="1109">
+   <properties>
+    <property name="weapon" value="gasnade,riot"/>
+   </properties>
+  </object>
+  <object id="1197" name="wp_p" x="3072" y="1749">
+   <properties>
+    <property name="weapon" value="gasnade,riot"/>
+   </properties>
+  </object>
+  <object id="1198" name="wp_p" x="832" y="531">
+   <properties>
+    <property name="weapon" value="fragnade,gasnade,gasnade,proxynade"/>
+   </properties>
+  </object>
+  <object id="1199" name="wp_p" x="1216" y="1236">
+   <properties>
+    <property name="weapon" value="fragnade,gasnade,gasnade,proxynade"/>
+   </properties>
+  </object>
+  <object id="1200" name="wp_p" x="2048" y="1812">
+   <properties>
+    <property name="weapon" value="fragnade,gasnade,gasnade,proxynade"/>
+   </properties>
+  </object>
+  <object id="1201" name="wp_p" x="512" y="788">
+   <properties>
+    <property name="weapon" value="magnum,tavor,xm8,machete"/>
+   </properties>
+  </object>
+  <object id="1202" name="wp_p" x="2496" y="659">
+   <properties>
+    <property name="weapon" value="tec9,uzi,mp5,machete"/>
+   </properties>
+  </object>
+  <object id="1203" name="wp_p" x="1408" y="1941">
+   <properties>
+    <property name="weapon" value="mp5,tavor,machete"/>
+   </properties>
+  </object>
+  <object id="1204" name="wp_p" x="1856" y="341">
+   <properties>
+    <property name="weapon" value="mp5,aa12,machete"/>
+   </properties>
+  </object>
+  <object id="1210" name="wp_p" x="2783" y="916">
+   <properties>
+    <property name="weapon" value="aa12,tec9,flame"/>
+   </properties>
+  </object>
+  <object id="1211" name="wp_p" x="1865" y="852">
+   <properties>
+    <property name="weapon" value="aa12,xm8,flame"/>
+   </properties>
+  </object>
+  <object id="1212" name="wp_p" x="287" y="1748">
+   <properties>
+    <property name="weapon" value="aa12,tec9,flame"/>
+   </properties>
+  </object>
+  <object id="1213" name="wp_p" x="2271" y="1557">
+   <properties>
+    <property name="weapon" value="shotgun,ak47,m16,flame"/>
+   </properties>
+  </object>
+  <object id="1214" name="wp_p" x="960" y="1813">
+   <properties>
+    <property name="weapon" value="magnum,aa12,shotgun"/>
+   </properties>
+  </object>
+  <object id="1215" name="wp_p" x="1440" y="276">
+   <properties>
+    <property name="weapon" value="tavor,xm8,ak47,m16"/>
+   </properties>
+  </object>
+  <object id="1216" name="wp_p" x="1601" y="980">
+   <properties>
+    <property name="weapon" value="rg6,smaw"/>
+   </properties>
+  </object>
+  <object id="1217" name="wp_p" x="1822" y="1940">
+   <properties>
+    <property name="weapon" value="healthpack"/>
+   </properties>
+  </object>
+  <object id="1218" name="spritefg" x="769" y="640">
+   <properties>
+    <property name="sprite" value="bushPalm"/>
+   </properties>
+  </object>
+  <object id="1219" name="wp_p" x="2111" y="533">
+   <properties>
+    <property name="weapon" value="fragnade,gasnade,gasnade,proxynade"/>
+   </properties>
+  </object>
+  <object id="1220" name="wp_p" x="2078" y="787">
+   <properties>
+    <property name="weapon" value="healthpack"/>
+   </properties>
+  </object>
+  <object id="1221" name="wp_p" x="459" y="1876">
+   <properties>
+    <property name="weapon" value="fragnade,gasnade,gasnade,proxynade"/>
+   </properties>
+  </object>
+  <object id="1222" name="ctf_sp_1" x="576" y="565"/>
+  <object id="1223" name="ctf_sp_2" x="2688" y="1286"/>
+  <object id="1224" name="fp_b_1" x="575" y="862">
+   <properties>
+    <property name="sprite" value="flagStationBlue"/>
+   </properties>
+  </object>
+  <object id="1225" name="fp_1" x="575" y="794"/>
+  <object id="1226" name="fp_b_2" x="2688" y="1503">
+   <properties>
+    <property name="sprite" value="flagStationOrange"/>
+   </properties>
+  </object>
+  <object id="1227" name="fp_2" x="2688" y="1435"/>
+  <object id="1228" name="ctf_sp_1" x="896" y="320"/>
+  <object id="1229" name="ctf_sp_1" x="387" y="771"/>
+  <object id="1230" name="ctf_sp_2" x="2304" y="1411"/>
+  <object id="1231" name="ctf_sp_2" x="2944" y="1350"/>
+ </objectgroup>
+ <objectgroup name="collision">
+  <object id="61" name="co_poly" x="445" y="798">
+   <polygon points="31,0 100,0 100,64 164,64 164,128 227,128 227,192 420,192 420,255 484,255 484,320 613,320 613,385 739,384 740,448 803,448 804,512 867,512 867,575 995,575 996,640 1380,640 1376,754 1093,896 963,897 860,961 770,960 643,897 515,896 388,833 259,833 -145,636 -224,482 -224,321 -160,321 -159,257 31,257"/>
+  </object>
+  <object id="1180" name="co_poly" x="864" y="108">
+   <polygon points="124,370 125,244 509,242 509,178 641,178 641,242 769,242 769,306 956,307 956,243 1025,243 1025,370 1153,370 1153,434 1279,435 1280,532 1263,557 992,690 929,690 672,818 544,818 418,882 352,882 -32,690 -163,690 -182,685 -191,660 -196,562 -67,562 -65,433 -3,433 -3,370"/>
+  </object>
+  <object id="1181" name="co_poly" x="1848" y="516">
+   <polygon points="-28,410 -27,346 165,346 166,282 292,282 292,219 328,219 392,152 456,218 611,218 611,153 683,153 683,218 745,218 746,347 873,347 873,410 1001,410 1001,539 1257,539 1257,588 968,731 712,730 456,858 328,795 199,795 72,731 -184,731 -312,667 -376,667 -442,635 -473,572 -478,539 -410,539 -410,474 -91,474 -91,410"/>
+  </object>
+  <object id="1182" name="co_poly" x="1265" y="1632">
+   <polygon points="-79,318 -79,383 108,382 109,319 176,319 176,446 493,446 493,318 621,318 621,254 746,254 747,190 812,190 812,62 941,62 940,-65 1072,-65 1072,-3 1260,-3 1260,-66 1388,-66 1388,-129 1452,-129 1451,-193 1583,-194 1584,-130 1712,-130 1713,-2 1774,-2 1775,127 1839,127 1839,352 1802,428 1679,479 1638,567 1359,702 -497,702 -753,575 -839,569 -881,480 -1073,383 -1137,352 -1174,281 -1175,62 -1042,62 -1042,126 -910,126 -910,190 -846,190 -846,254 -719,254 -719,318 -534,318 -533,254 -404,254 -405,191 -208,191 -208,318"/>
+  </object>
+ </objectgroup>
+</map>
