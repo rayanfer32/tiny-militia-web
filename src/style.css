@@ -200,15 +200,53 @@ html, body {
   position: relative;
 }
 
+.meter-trail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 230, 100, 0.7);
+  box-shadow: 0 0 8px rgba(255, 230, 100, 0.5);
+  border-radius: 3px;
+  transition: width 0.55s cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .meter-fill {
   height: 100%;
-  transition: width 0.1s ease-out;
+  position: relative;
+  z-index: 2;
+  transition: width 0.22s cubic-bezier(0.25, 1, 0.5, 1);
   border-radius: 3px;
 }
 
 .health-fill {
   background: linear-gradient(90deg, #b5179e, #f72585);
   box-shadow: 0 0 10px var(--color-health-glow);
+}
+
+.lives-container {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 77, 141, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.life-pip {
+  font-size: 13px;
+  line-height: 1;
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  filter: drop-shadow(0 0 4px rgba(255, 77, 141, 0.85));
+}
+
+.life-pip.lost {
+  filter: grayscale(1) opacity(0.25);
+  transform: scale(0.75);
 }
 
 .boost-fill {
@@ -1279,14 +1317,24 @@ body.pointer-locked #game-canvas {
   }
 
   .status-panel {
-    min-width: 155px;
+    min-width: 170px;
     padding: 4px 8px;
     gap: 4px;
     border-width: 1.5px;
   }
 
   .stat-row {
-    gap: 6px;
+    gap: 5px;
+  }
+
+  .lives-container {
+    gap: 2px;
+    padding: 1px 4px;
+    border-radius: 8px;
+  }
+
+  .life-pip {
+    font-size: 10px;
   }
 
   .meter-bar-wrapper {

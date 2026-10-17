@@ -21,6 +21,10 @@ export interface PlayerEntity {
   maxFuel: number;
   isBoosting: boolean;
   grenades: number;
+  lives: number;
+  maxLives: number;
+  invulnerableTimer: number;
+  timeSinceLastDamage: number;
   weapon: WeaponInstance;
   secondaryWeapon: WeaponInstance;
   model: SoldierModel;
@@ -207,6 +211,10 @@ export class Game {
       maxFuel: 100,
       isBoosting: false,
       grenades: 3,
+      lives: 3,
+      maxLives: 3,
+      invulnerableTimer: 0,
+      timeSinceLastDamage: 999,
 
       weapon: new WeaponInstance('ak47'),
       secondaryWeapon: new WeaponInstance('magnum'),
@@ -214,16 +222,33 @@ export class Game {
       model: createSoldierModel({ isBot: false, helmetColor: 'beret' }),
       weaponMesh: createWeaponMesh('ak47'),
 
-      takeDamage: (amount: number, _attacker: string) => {
+      takeDamage: (amount: number, attacker: string) => {
         if (this.isGameOver || !this.player) return;
         if (this.testMode) return; // Immune to all damage in Test Mode
-        this.player.health = Math.max(0, this.player.health - amount);
+        if (this.player.invulnerableTimer > 0) return; // Spawn protection
+
+        // Gradual health reduction:
+        // Scale and clamp damage so bot attacks do not instantly kill the player in 1 shot
+        let scaledDmg = amount;
+        if (attacker.includes('Explosion')) {
+          scaledDmg = Math.min(26, Math.max(10, Math.round(amount * 0.22)));
+        } else if (attacker.includes('Melee')) {
+          scaledDmg = 14;
+        } else {
+          // Bullets / pellets:
+          // Sniper (120) -> 24; Shotgun pellet (18) -> ~4; Rifle (18-20) -> ~8; Pistol (26) -> 9
+          scaledDmg = Math.max(3, Math.min(24, Math.round(amount * 0.38)));
+        }
+
+        this.player.health = Math.max(0, this.player.health - scaledDmg);
+        this.player.timeSinceLastDamage = 0;
         this.particles.emitBloodSplatter(this.player.pos.x, this.player.pos.y + 0.6, 0);
-        this.addScreenShake(0.3);
+        sounds.play('impact', { volume: 0.65 });
+        this.addScreenShake(0.25);
         this.updateHUD();
 
         if (this.player.health <= 0) {
-          this.triggerGameOver();
+          this.handlePlayerDeath(attacker);
         }
       }
     };
@@ -497,6 +522,24 @@ export class Game {
     if (!this.player) return;
     const p = this.player;
     p.weapon.update(dt);
+
+    // Invulnerability timer & respawn spawn protection flicker
+    if (p.invulnerableTimer > 0) {
+      p.invulnerableTimer -= dt;
+      p.model.root.visible = Math.floor(p.invulnerableTimer * 12) % 2 === 0;
+      if (p.invulnerableTimer <= 0) {
+        p.invulnerableTimer = 0;
+        p.model.root.visible = true;
+      }
+    } else {
+      p.model.root.visible = true;
+    }
+
+    // Natural gradual health regeneration (classic Mini Militia: recovers after 2.5s without taking damage)
+    p.timeSinceLastDamage += dt;
+    if (p.timeSinceLastDamage >= 2.5 && p.health < p.maxHealth && p.health > 0) {
+      p.health = Math.min(p.maxHealth, p.health + 12 * dt);
+    }
 
     let moveX = 0;
     if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX -= 1;
@@ -803,6 +846,11 @@ export class Game {
       else hpBar.classList.remove('infinite-mode');
     }
 
+    const hpTrail = document.getElementById('health-trail');
+    if (hpTrail) {
+      hpTrail.style.width = `${Math.max(0, this.player.health)}%`;
+    }
+
     const boostBar = document.getElementById('boost-bar');
     if (boostBar) {
       boostBar.style.width = `${Math.max(0, this.player.jetpackFuel)}%`;
@@ -835,15 +883,93 @@ export class Game {
     if (wTitle) {
       wTitle.textContent = `WAVE ${this.wave}`;
     }
+
+    this.updateLivesHUD();
+  }
+
+  public updateLivesHUD(): void {
+    const lives = this.player ? this.player.lives : 3;
+    for (let i = 1; i <= 3; i++) {
+      const pip = document.getElementById(`life-${i}`);
+      if (pip) {
+        if (i > lives) {
+          pip.classList.add('lost');
+        } else {
+          pip.classList.remove('lost');
+        }
+      }
+    }
+  }
+
+  private getSafestSpawn(): Point2D {
+    if (this.map.spawns.length === 0) {
+      return { x: 0, y: 8 };
+    }
+    const activeBots = this.bots.filter(b => !b.isDead);
+    if (activeBots.length === 0) {
+      return this.map.spawns.reduce((closest, s) =>
+        Math.hypot(s.x, s.y) < Math.hypot(closest.x, closest.y) ? s : closest
+      );
+    }
+
+    let bestSpawn = this.map.spawns[0];
+    let bestMinDist = -1;
+
+    for (const sp of this.map.spawns) {
+      let minDist = Infinity;
+      for (const bot of activeBots) {
+        const d = Math.hypot(sp.x - bot.pos.x, sp.y - bot.pos.y);
+        if (d < minDist) minDist = d;
+      }
+      if (minDist > bestMinDist) {
+        bestMinDist = minDist;
+        bestSpawn = sp;
+      }
+    }
+
+    return bestSpawn;
+  }
+
+  private handlePlayerDeath(attacker: string): void {
+    if (this.isGameOver || !this.player) return;
+    if (this.testMode) return;
+
+    if (this.player.lives > 1) {
+      this.player.lives--;
+      this.updateLivesHUD();
+      this.addKillfeed(attacker, 'Player', 'Eliminated');
+      sounds.play('gotme', { isVoice: true, volume: 0.95 });
+      this.showBanner('REDEPLOYING...', `${this.player.lives} ${this.player.lives === 1 ? 'LIFE' : 'LIVES'} REMAINING!`);
+      this.showSargeCallout(`Shake it off! ${this.player.lives} ${this.player.lives === 1 ? 'life' : 'lives'} left!`, 'coverme');
+
+      // Safe respawn
+      const safeSp = this.getSafestSpawn();
+      this.player.pos.x = safeSp.x;
+      this.player.pos.y = safeSp.y;
+      this.player.vel.x = 0;
+      this.player.vel.y = 0;
+      this.player.health = this.player.maxHealth;
+      this.player.jetpackFuel = this.player.maxFuel;
+      this.player.invulnerableTimer = 2.5;
+      this.player.timeSinceLastDamage = 999;
+      this.player.model.root.position.set(safeSp.x, safeSp.y, 0);
+      this.player.model.root.visible = true;
+
+      sounds.play('readyup', { volume: 0.85, isVoice: true });
+      this.updateHUD();
+    } else {
+      this.player.lives = 0;
+      this.updateLivesHUD();
+      this.addKillfeed(attacker, 'Player', 'Eliminated');
+      this.triggerGameOver();
+    }
   }
 
   private triggerAbyssDeath(): void {
     if (this.isGameOver || !this.player) return;
-    this.player.health = 0;
-    this.updateHUD();
     this.addKillfeed('The Abyss', 'Player', 'Freefall');
     this.showBanner('FELL INTO THE ABYSS', 'WATCH YOUR STEP, SOLDIER!');
-    this.triggerGameOver();
+    this.handlePlayerDeath('The Abyss');
   }
 
   private triggerGameOver(): void {
