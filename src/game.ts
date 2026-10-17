@@ -79,6 +79,7 @@ export class Game {
   public isPaused: boolean = false;
   public waveInProgress: boolean = false;
   public testMode: boolean = false;
+  private currentWaveSession: number = 0;
 
   public screenShake: number = 0;
   public camTarget: THREE.Vector3 = new THREE.Vector3(0, 0, 32);
@@ -243,10 +244,11 @@ export class Game {
       this.showSargeCallout("Wave cleared! More hostiles coming in hot!", 'bringit');
     }
 
+    const waveSession = ++this.currentWaveSession;
     const botCount = 2 + waveNum * 2;
     for (let i = 0; i < botCount; i++) {
       setTimeout(() => {
-        if (this.isGameOver) return;
+        if (this.isGameOver || this.currentWaveSession !== waveSession) return;
         const spIdx = (i + 1) % Math.max(1, this.map.spawns.length);
         const sp = this.map.spawns[spIdx] || { x: (Math.random() - 0.5) * 40, y: 8 };
 
@@ -952,6 +954,68 @@ export class Game {
     this.requestPointerLock();
   }
 
+  public restartGame(): void {
+    Game.enterFullscreen();
+
+    // Hide overlays
+    const goModal = document.getElementById('gameover-overlay');
+    if (goModal) goModal.classList.add('hidden');
+    const pauseModal = document.getElementById('pause-overlay');
+    if (pauseModal) pauseModal.classList.add('hidden');
+
+    this.isGameOver = false;
+    this.isPaused = false;
+    this.waveInProgress = false;
+
+    // Reset stats
+    this.wave = 1;
+    this.score = 0;
+    this.kills = 0;
+    this.matchTime = 300;
+
+    // Clear bullets
+    for (const b of this.bullets) {
+      this.scene.remove(b.mesh);
+    }
+    this.bullets = [];
+
+    // Clear grenades
+    for (const g of this.grenades) {
+      this.scene.remove(g.mesh);
+    }
+    this.grenades = [];
+
+    // Clear bots
+    for (const bot of this.bots) {
+      bot.destroy();
+    }
+    this.bots = [];
+
+    // Clear existing player
+    if (this.player) {
+      this.scene.remove(this.player.model.root);
+      this.player = null;
+    }
+
+    // Reset killfeed DOM
+    const kf = document.getElementById('killfeed');
+    if (kf) kf.innerHTML = '';
+
+    // Spawn player and start wave 1
+    this.spawnPlayer();
+    this.startWave(1);
+
+    sounds.play('readyup', { volume: 0.9, isVoice: true });
+    this.showSargeCallout("Back in the fight! Go get 'em!", 'cmonboy');
+
+    this.updateHUD();
+
+    if (this.targetIndicatorElem && !this.isUsingTouch) {
+      this.targetIndicatorElem.classList.remove('hidden');
+    }
+    this.requestPointerLock();
+  }
+
   public triggerHitmarker(): void {
     this.hitmarkerTimer = 0.12;
     if (this.reticleHitmarkerElem) {
@@ -1240,7 +1304,7 @@ export class Game {
       btnResume.addEventListener('click', () => this.resumeGame());
     }
     if (btnRestart) {
-      btnRestart.addEventListener('click', () => window.location.reload());
+      btnRestart.addEventListener('click', () => this.restartGame());
     }
 
     const btnTestMode = document.getElementById('btn-test-mode');
@@ -1268,7 +1332,7 @@ export class Game {
 
     const btnPlayAgain = document.getElementById('btn-play-again');
     if (btnPlayAgain) {
-      btnPlayAgain.addEventListener('click', () => window.location.reload());
+      btnPlayAgain.addEventListener('click', () => this.restartGame());
     }
   }
 

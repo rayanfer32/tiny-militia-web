@@ -327,4 +327,8 @@ export class Bot {
       this.scene.remove(this.model.root);
     }, 4000);
   }
+
+  public destroy(): void {
+    this.scene.remove(this.model.root);
+  }
 }
