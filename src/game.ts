@@ -297,9 +297,47 @@ export class Game {
     this.net.on('match_end', (m) => {
       this.handleMpMatchEnd(m.payload);
     });
+    this.net.on('match_start', (m) => {
+      if (m.payload?.duration) this.matchTime = m.payload.duration;
+    });
     this.net.on('event', (m) => {
-      if (m.payload?.kind === 'kill') {
-        this.addKillfeed(String(m.payload.killerId || 'unknown').slice(0,6), String(m.payload.victimId).slice(0,6), 'shot');
+      const pl = m.payload || {};
+      switch (pl.kind) {
+        case 'kill':
+          this.addKillfeed(String(pl.killerId || 'unknown').slice(0,6), String(pl.victimId).slice(0,6), pl.reason || 'shot');
+          break;
+        case 'shot': {
+          // render remote (and local) muzzle flash + audio from server authority
+          if (pl.ownerId && pl.ownerId !== this.mpPlayerId) {
+            sounds.play('ak47', { volume: 0.7 });
+          }
+          if (typeof pl.x === 'number') {
+            this.particles.emitMuzzleFlash(pl.x, pl.y, 0, pl.angle || 0);
+          }
+          break;
+        }
+        case 'hit': {
+          if (pl.targetId === this.mpPlayerId) {
+            sounds.play('impact', { volume: 0.65 });
+            this.addScreenShake(0.2);
+            this.triggerHitmarker();
+          } else {
+            this.triggerHitmarker();
+          }
+          break;
+        }
+        case 'respawn': {
+          if (pl.playerId && this.remotePlayers.has(pl.playerId)) {
+            const rp = this.remotePlayers.get(pl.playerId)!;
+            rp.model.root.visible = true;
+          }
+          break;
+        }
+      }
+    });
+    this.net.on('close', (m) => {
+      if (!this.isGameOver) {
+        this.showBanner('CONNECTION LOST', 'Returning to menu...');
       }
     });
     this.net.connect(this.mpWsUrl);
@@ -400,7 +438,12 @@ export class Game {
       );
       const speed = Math.hypot(st.vx || 0, st.vy || 0);
       rp.model.animateWalk(speed, !st.onGround);
-      rp.model.root.visible = st.health > 0;
+      // invuln flicker
+      let visible = st.health > 0 && st.alive;
+      if (st.invulnUntil && Date.now() < st.invulnUntil) {
+        visible = visible && (Math.floor(Date.now() / 80) % 2 === 0);
+      }
+      rp.model.root.visible = visible;
     }
   }
 
@@ -559,7 +602,7 @@ export class Game {
     this.particles.emitExplosion(x, y, 0, radius / 3.5);
     this.addScreenShake(0.85);
 
-    if (this.player) {
+    if (!this.mpMode && this.player) {
       const pDist = Math.hypot(this.player.pos.x - x, this.player.pos.y - y);
       if (pDist < radius) {
         const dmg = Math.round(maxDamage * (1 - pDist / radius));
@@ -570,7 +613,7 @@ export class Game {
       }
     }
 
-    for (const bot of this.bots) {
+    if (!this.mpMode) for (const bot of this.bots) {
       if (bot.isDead) continue;
       const bDist = Math.hypot(bot.pos.x - x, bot.pos.y - y);
       if (bDist < radius) {
@@ -763,42 +806,46 @@ export class Game {
     const wantsToShoot = this.mouse.down || (this.joysticks.aim.active && Math.hypot(this.joysticks.aim.x, this.joysticks.aim.y) > 0.45);
     const now = performance.now() / 1000;
 
-    if (wantsToShoot && p.weapon.canShoot(now)) {
-      p.weapon.consumeAmmo(now);
-      this.updateHUD();
+    // In multiplayer, firing is server-authoritative; only send intent via input.
+    // Render feedback is driven by server 'shot' events (see setupMultiplayer).
+    if (!this.mpMode) {
+      if (wantsToShoot && p.weapon.canShoot(now)) {
+        p.weapon.consumeAmmo(now);
+        this.updateHUD();
 
-      sounds.play(p.weapon.def.sound, { volume: 0.95 });
-      this.addScreenShake(p.weapon.def.isRocket ? 0.45 : 0.12);
-      this.reticleRecoil = 1.0;
+        sounds.play(p.weapon.def.sound, { volume: 0.95 });
+        this.addScreenShake(p.weapon.def.isRocket ? 0.45 : 0.12);
+        this.reticleRecoil = 1.0;
 
-      const worldAim = p.aimAngle;
-      const muzzleX = p.pos.x + Math.cos(worldAim) * 0.95;
-      const muzzleY = p.pos.y + 0.7 + Math.sin(worldAim) * 0.95;
+        const worldAim = p.aimAngle;
+        const muzzleX = p.pos.x + Math.cos(worldAim) * 0.95;
+        const muzzleY = p.pos.y + 0.7 + Math.sin(worldAim) * 0.95;
 
-      this.particles.emitMuzzleFlash(muzzleX, muzzleY, 0, worldAim);
+        this.particles.emitMuzzleFlash(muzzleX, muzzleY, 0, worldAim);
 
-      for (let i = 0; i < p.weapon.def.pellets; i++) {
-        const spreadAngle = worldAim + (Math.random() - 0.5) * p.weapon.def.spread;
-        this.spawnBullet({
-          owner: 'player',
-          x: muzzleX,
-          y: muzzleY,
-          vx: Math.cos(spreadAngle) * p.weapon.def.bulletSpeed,
-          vy: Math.sin(spreadAngle) * p.weapon.def.bulletSpeed,
-          damage: p.weapon.def.damage,
-          isRocket: p.weapon.def.isRocket,
-          color: p.weapon.def.trailColor
-        });
-      }
+        for (let i = 0; i < p.weapon.def.pellets; i++) {
+          const spreadAngle = worldAim + (Math.random() - 0.5) * p.weapon.def.spread;
+          this.spawnBullet({
+            owner: 'player',
+            x: muzzleX,
+            y: muzzleY,
+            vx: Math.cos(spreadAngle) * p.weapon.def.bulletSpeed,
+            vy: Math.sin(spreadAngle) * p.weapon.def.bulletSpeed,
+            damage: p.weapon.def.damage,
+            isRocket: p.weapon.def.isRocket,
+            color: p.weapon.def.trailColor
+          });
+        }
 
-      p.vel.x -= Math.cos(worldAim) * 2.5;
-      p.vel.y -= Math.sin(worldAim) * 2.5;
-    } else if (wantsToShoot && p.weapon.ammoInClip <= 0 && !p.weapon.isReloading) {
-      if (p.weapon.reserveAmmo > 0) {
-        sounds.play('reload', { volume: 0.8 });
-        p.weapon.startReload();
-      } else {
-        sounds.play('dryfire', { volume: 0.5 });
+        p.vel.x -= Math.cos(worldAim) * 2.5;
+        p.vel.y -= Math.sin(worldAim) * 2.5;
+      } else if (wantsToShoot && p.weapon.ammoInClip <= 0 && !p.weapon.isReloading) {
+        if (p.weapon.reserveAmmo > 0) {
+          sounds.play('reload', { volume: 0.8 });
+          p.weapon.startReload();
+        } else {
+          sounds.play('dryfire', { volume: 0.5 });
+        }
       }
     }
     // Movement integration & slope traversal
@@ -837,8 +884,8 @@ export class Game {
 
     p.onGround = this.physics.resolveCircle(p.pos, p.radius, p.vel);
 
-    // Abyss freefall death check
-    if (p.pos.y < -28) {
+    // Abyss freefall death check (single-player only; server handles MP)
+    if (!this.mpMode && p.pos.y < -28) {
       this.triggerAbyssDeath();
       return;
     }
@@ -888,7 +935,7 @@ export class Game {
         continue;
       }
 
-      if (b.owner === 'bot') {
+      if (!this.mpMode && b.owner === 'bot' && this.player) {
         const d = Math.hypot(this.player.pos.x - b.x, (this.player.pos.y + 0.6) - b.y);
         if (d < this.player.radius) {
           if (b.isRocket) {
@@ -1159,8 +1206,12 @@ export class Game {
 
     if (this.isPaused) return;
 
-    if (!this.isGameOver && !this.mpMode) {
-      this.matchTime -= dt;
+    if (!this.isGameOver) {
+      if (!this.mpMode) {
+        this.matchTime -= dt;
+      } else {
+        this.matchTime = Math.max(0, this.matchTime - dt);
+      }
       const mins = Math.floor(Math.max(0, this.matchTime) / 60);
       const secs = Math.floor(Math.max(0, this.matchTime) % 60);
       const timerElem = document.getElementById('match-timer');
@@ -1180,6 +1231,8 @@ export class Game {
         this.sendMpInput();
       }
       this.updateRemotePlayers(dt);
+      this.updateBullets(dt);
+      this.updateGrenades(dt);
     } else if (this.player) {
       for (const bot of this.bots) {
         if (bot.pos.y < -28 && !bot.isDead) {

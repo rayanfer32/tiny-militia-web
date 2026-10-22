@@ -1,8 +1,9 @@
 # Multiplayer Implementation Checkpoint
 
 ## Current state
-- Phases 0–4 largely implemented; build passes (`npm run build`, `wrangler dev`).
+- Phases 0–4 largely implemented; build passes (`npm run build`, `wrangler` typecheck).
 - Single-player untouched; multiplayer end-to-end movement works in local test.
+- Phase 5 polish in progress: client now defers firing to server authority, renders shot/hit/respawn events, invuln flicker on remote players, guards local damage in MP, updates match timer display in MP, and calls bullet/grenade visual updates in MP.
 
 ## What's done
 - `shared/` extracted (physics, weapons, mapData, types); client re-exports.
@@ -16,7 +17,7 @@
 - Set `VITE_MP_API_BASE` if worker not on localhost:8787.
 
 ## Known gaps / next steps
-- Combat polish: rockets/grenades sync, weapon pickups, invuln flicker on client.
+- Combat polish: rockets/grenades sync, weapon pickups, invuln flicker on client (partial).
 - Lag compensation (position history) not implemented.
 - Delta snapshots / compression not implemented.
 - Mobile/touch in MP not fully tested.
@@ -26,7 +27,7 @@
 - Tests: manual two-browser matrix; free-tier budget check.
 
 ## Last modified files
-- .gitignore, package-lock.json, src/game.ts (plus tracked shared/, src/net/, worker/, MULTIPLAYER_PLAN.md from temp commit).
+- src/game.ts (MP authority/event/timer/visual guards), CHECKPOINT.md.
 
 ## Resume
 - Continue with Phase 5 polish & hardening.
