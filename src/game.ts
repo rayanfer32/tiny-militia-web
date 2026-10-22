@@ -1173,7 +1173,14 @@ export class Game {
       this.updatePlayer(dt);
     }
 
-    if (this.player) {
+    if (this.mpMode) {
+      this.mpInputAccum += dt;
+      if (this.mpInputAccum >= 0.05) {
+        this.mpInputAccum = 0;
+        this.sendMpInput();
+      }
+      this.updateRemotePlayers(dt);
+    } else if (this.player) {
       for (const bot of this.bots) {
         if (bot.pos.y < -28 && !bot.isDead) {
           bot.takeDamage(9999, this.map);
@@ -1181,10 +1188,9 @@ export class Game {
         }
         bot.update(dt, this.player, (opts) => this.spawnBullet(opts), this.map);
       }
+      this.updateBullets(dt);
+      this.updateGrenades(dt);
     }
-
-    this.updateBullets(dt);
-    this.updateGrenades(dt);
 
     this.particles.update(dt);
     this.map.update(dt);
@@ -1617,7 +1623,13 @@ export class Game {
 
     const btnPlayAgain = document.getElementById('btn-play-again');
     if (btnPlayAgain) {
-      btnPlayAgain.addEventListener('click', () => this.restartGame());
+      btnPlayAgain.addEventListener('click', () => {
+        if (this.mpMode) {
+          window.location.reload();
+        } else {
+          this.restartGame();
+        }
+      });
     }
   }
 
