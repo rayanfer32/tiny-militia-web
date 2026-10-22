@@ -72,31 +72,31 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-  A[alarm() fires] --> B{status == running?}
-  B -- no --> Z[stop scheduling, hibernate]
-  B -- yes --> T[tick()]
-  T --> P1[For each connected player]
-  P1 --> I[Read latest input from inputs map]
-  I --> HP[Health regen after 2.5s idle]
-  HP --> BST[Jetpack consume/regen]
-  BST --> RLD[Reload timer]
-  RLD --> FIR{firing?}
-  FIR -- yes --> HS[Hitscan raycast vs players<br/>apply damage, kill if health<=0]
-  HS --> EV[broadcast shot/hit/kill events]
-  FIR -- no --> MV
-  EV --> MV[Movement integration<br/>slope tangent on ground / air physics]
-  MV --> COL[resolveCircle vs map polygons/segments]
-  COL --> ABY{y < -28?}
-  ABY -- yes --> KILL[killPlayer (abyss)]
-  ABY -- no --> NXT[next player]
+  A["alarm fires"] --> B{"status == running?"}
+  B -- no --> Z["stop scheduling, hibernate"]
+  B -- yes --> T["tick()"]
+  T --> P1["For each connected player"]
+  P1 --> I["Read latest input"]
+  I --> HP["Health regen"]
+  HP --> BST["Jetpack consume/regen"]
+  BST --> RLD["Reload timer"]
+  RLD --> FIR{"firing?"}
+  FIR -- yes --> HS["Hitscan raycast"]
+  HS --> EV["broadcast shot/hit/kill"]
+  FIR -- no --> MV["Movement integration"]
+  EV --> MV
+  MV --> COL["resolveCircle vs map"]
+  COL --> ABY{"y less than -28?"}
+  ABY -- yes --> KILL["killPlayer abyss"]
+  ABY -- no --> NXT["next player"]
   KILL --> NXT
   NXT --> P1
-  P1 --> RSP[Respawn players whose timer elapsed]
-  RSP --> TIM[Decrement match timer]
-  TIM --> END{timeRemaining <= 0?}
-  END -- yes --> EM[endMatch -> broadcast match_end]
-  END -- no --> SNAP[broadcastSnapshot to all WS]
-  SNAP --> SCH[scheduleTick -> setAlarm +50ms]
+  P1 --> RSP["Respawn timers"]
+  RSP --> TIM["Decrement timer"]
+  TIM --> END{"timeRemaining <= 0?"}
+  END -- yes --> EM["endMatch"]
+  END -- no --> SNAP["broadcastSnapshot"]
+  SNAP --> SCH["scheduleTick"]
   SCH --> A
 ```
 
@@ -104,17 +104,17 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-  K[Keyboard/Touch] --> SI[sendMpInput @20Hz]
-  SI --> WS[WebSocket input msg]
-  WS --> R[RoomDO.webSocketMessage]
-  R --> V[Validate moveX/moveY/aim in range]
-  V --> BUF[inputs.set playerId]
-  BUF --> TICK[tick reads input]
-  TICK --> SIM[Shared physics sim]
-  SIM --> SNAP[snapshot @10-15Hz]
-  SNAP --> C[Client applySnapshot]
-  C --> REC[Reconcile local player if drift > 1.5]
-  C --> INT[Interpolate remote players]
+  K["Keyboard/Touch"] --> SI["sendMpInput 20Hz"]
+  SI --> WS["WebSocket input msg"]
+  WS --> R["RoomDO.webSocketMessage"]
+  R --> V["Validate inputs"]
+  V --> BUF["inputs.set playerId"]
+  BUF --> TICK["tick reads input"]
+  TICK --> SIM["Shared physics sim"]
+  SIM --> SNAP["snapshot 10-15Hz"]
+  SNAP --> C["Client applySnapshot"]
+  C --> REC["Reconcile if drift"]
+  C --> INT["Interpolate remote players"]
 ```
 
 ## 6. WebSocket message protocol
@@ -142,10 +142,10 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  E[Empty room / ended match] --> H[DO hibernates<br/>no CPU, no duration billed]
-  A[Incoming WS message or alarm] --> W[DO wakes]
-  W --> P[Process, broadcast]
-  P --> E2{still active?}
+  E["Empty or ended room"] --> H["DO hibernates"]
+  A["Incoming WS or alarm"] --> W["DO wakes"]
+  W --> P["Process, broadcast"]
+  P --> E2{"still active?"}
   E2 -- yes --> A
   E2 -- no --> H
 ```
