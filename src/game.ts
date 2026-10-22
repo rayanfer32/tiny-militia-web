@@ -6,6 +6,7 @@ import { ParticleSystem } from './particles.js';
 import { SoldierModel, createSoldierModel, createWeaponMesh } from './proceduralModels.js';
 import { WeaponInstance, WEAPON_TYPES } from './weapons.js';
 import { Bot, BulletSpawnOptions } from './bot.js';
+import type { NetworkClient } from './net/NetworkClient.js';
 import { sounds } from './audio.js';
 
 export interface PlayerEntity {
@@ -83,6 +84,17 @@ export class Game {
   public isPaused: boolean = false;
   public waveInProgress: boolean = false;
   public testMode: boolean = false;
+
+  // Multiplayer state
+  public mpMode: boolean = false;
+  public net: NetworkClient | null = null;
+  public mpWsUrl: string | null = null;
+  public mpNickname: string = 'Player';
+  public mpPlayerId: string | null = null;
+  public mpHostId: string | null = null;
+  public remotePlayers: Map<string, { model: any; state: any; targetX: number; targetY: number; lastUpdate: number }> = new Map();
+  private mpInputAccum: number = 0;
+  private mpInputSeq: number = 0;
   private currentWaveSession: number = 0;
 
   public screenShake: number = 0;
@@ -112,8 +124,12 @@ export class Game {
 
   private lastTime: number = 0;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options?: { mp?: boolean; net?: NetworkClient; wsUrl?: string; nickname?: string }) {
     this.canvas = canvas;
+    this.mpMode = !!options?.mp;
+    this.net = options?.net || null;
+    this.mpWsUrl = options?.wsUrl || null;
+    this.mpNickname = options?.nickname || 'Player';
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x70b4e0);
@@ -172,10 +188,14 @@ export class Game {
     await this.map.load();
 
     this.spawnPlayer();
-    this.startWave(1);
 
-    sounds.play('readyup', { volume: 0.9, isVoice: true });
-    this.showSargeCallout("Come on boy! Show 'em what you got!", 'cmonboy');
+    if (this.mpMode) {
+      this.setupMultiplayer();
+    } else {
+      this.startWave(1);
+      sounds.play('readyup', { volume: 0.9, isVoice: true });
+      this.showSargeCallout("Come on boy! Show 'em what you got!", 'cmonboy');
+    }
 
     this.lastTime = performance.now();
     this.animate = this.animate.bind(this);
@@ -256,6 +276,145 @@ export class Game {
     this.player.model.root.position.set(spawnX, spawnY, 0);
     this.player.model.weaponMount.add(this.player.weaponMesh);
     this.scene.add(this.player.model.root);
+  }
+
+  private setupMultiplayer(): void {
+    if (!this.net || !this.mpWsUrl) return;
+    this.net.on('welcome', (m) => {
+      this.mpPlayerId = m.payload.playerId;
+      this.mpHostId = m.payload.hostId;
+    });
+    this.net.on('player_join', (m) => {
+      if (m.payload.playerId === this.mpPlayerId) return;
+      this.addRemotePlayer(m.payload.playerId, m.payload.nickname);
+    });
+    this.net.on('player_leave', (m) => {
+      this.removeRemotePlayer(m.payload.playerId);
+    });
+    this.net.on('snapshot', (m) => {
+      this.applySnapshot(m.payload);
+    });
+    this.net.on('match_end', (m) => {
+      this.handleMpMatchEnd(m.payload);
+    });
+    this.net.on('event', (m) => {
+      if (m.payload?.kind === 'kill') {
+        this.addKillfeed(String(m.payload.killerId || 'unknown').slice(0,6), String(m.payload.victimId).slice(0,6), 'shot');
+      }
+    });
+    this.net.connect(this.mpWsUrl);
+  }
+
+  private addRemotePlayer(id: string, nickname: string): void {
+    if (this.remotePlayers.has(id)) return;
+    const model = createSoldierModel({ isBot: true, helmetColor: 'red' });
+    this.scene.add(model.root);
+    this.remotePlayers.set(id, { model, state: null, targetX: 0, targetY: 0, lastUpdate: performance.now() });
+  }
+
+  private removeRemotePlayer(id: string): void {
+    const rp = this.remotePlayers.get(id);
+    if (rp) {
+      this.scene.remove(rp.model.root);
+      this.remotePlayers.delete(id);
+    }
+  }
+
+  private applySnapshot(payload: any): void {
+    const players = payload.players || [];
+    for (const st of players) {
+      if (st.id === this.mpPlayerId) {
+        if (this.player) {
+          const dx = st.x - this.player.pos.x;
+          const dy = st.y - this.player.pos.y;
+          if (Math.hypot(dx, dy) > 1.5) {
+            this.player.pos.x = st.x;
+            this.player.pos.y = st.y;
+            this.player.vel.x = st.vx;
+            this.player.vel.y = st.vy;
+          }
+          this.player.health = st.health;
+          this.player.jetpackFuel = st.boost;
+          this.player.weapon.ammoInClip = st.ammo;
+          this.player.weapon.reserveAmmo = st.reserve;
+          this.updateHUD();
+        }
+        continue;
+      }
+      if (!this.remotePlayers.has(st.id)) {
+        this.addRemotePlayer(st.id, st.nickname);
+      }
+      const rp = this.remotePlayers.get(st.id);
+      if (rp) {
+        rp.state = st;
+        rp.targetX = st.x;
+        rp.targetY = st.y;
+        rp.lastUpdate = performance.now();
+      }
+    }
+    if (payload.match) {
+      this.matchTime = payload.match.timeRemaining;
+    }
+  }
+
+  private sendMpInput(): void {
+    if (!this.net || !this.player) return;
+    this.mpInputSeq++;
+    let moveX = 0;
+    if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX -= 1;
+    if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX += 1;
+    if (this.joysticks.move.active) moveX += this.joysticks.move.x;
+
+    let boost = (this.keys['KeyW'] || this.keys['Space'] || this.keys['ArrowUp']);
+    if (this.joysticks.move.active && this.joysticks.move.y > 0.3) boost = true;
+
+    const wantsShoot = this.mouse.down || (this.joysticks.aim.active && Math.hypot(this.joysticks.aim.x, this.joysticks.aim.y) > 0.45);
+
+    this.net.send({
+      type: 'input',
+      payload: {
+        seq: this.mpInputSeq,
+        moveX,
+        moveY: boost ? 1 : 0,
+        aimAngle: this.player.aimAngle,
+        firing: wantsShoot,
+        boost,
+        reload: this.keys['KeyR'] || false,
+      }
+    });
+  }
+
+  private updateRemotePlayers(dt: number): void {
+    for (const [id, rp] of this.remotePlayers) {
+      const st = rp.state;
+      if (!st) continue;
+      const lerp = Math.min(1, dt * 12);
+      rp.model.root.position.x += (rp.targetX - rp.model.root.position.x) * lerp;
+      rp.model.root.position.y += (rp.targetY - rp.model.root.position.y) * lerp;
+      rp.model.root.position.z = 0;
+      rp.model.root.scale.x = st.facingRight ? 1 : -1;
+      const armAngle = st.aimAngle;
+      rp.model.armPivot.rotation.z = Math.atan2(
+        Math.sin(armAngle),
+        st.facingRight ? Math.cos(armAngle) : -Math.cos(armAngle)
+      );
+      const speed = Math.hypot(st.vx || 0, st.vy || 0);
+      rp.model.animateWalk(speed, !st.onGround);
+      rp.model.root.visible = st.health > 0;
+    }
+  }
+
+  private handleMpMatchEnd(payload: any): void {
+    this.isGameOver = true;
+    const goModal = document.getElementById('gameover-overlay');
+    if (goModal) goModal.classList.remove('hidden');
+    const goWaves = document.getElementById('go-waves');
+    if (goWaves) goWaves.textContent = 'MP';
+    const goKills = document.getElementById('go-kills');
+    const me = (payload.scores || []).find((s: any) => s.playerId === this.mpPlayerId);
+    if (goKills) goKills.textContent = String(me?.kills ?? 0);
+    const goScore = document.getElementById('go-score');
+    if (goScore) goScore.textContent = String(me?.kills ?? 0);
   }
 
   public startWave(waveNum: number): void {
@@ -1000,7 +1159,7 @@ export class Game {
 
     if (this.isPaused) return;
 
-    if (!this.isGameOver) {
+    if (!this.isGameOver && !this.mpMode) {
       this.matchTime -= dt;
       const mins = Math.floor(Math.max(0, this.matchTime) / 60);
       const secs = Math.floor(Math.max(0, this.matchTime) % 60);

@@ -25,3 +25,6 @@ dist-ssr
 
 # APK / Binaries
 *.apk
+
+worker/.wrangler
+worker/tmp

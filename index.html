@@ -232,9 +232,36 @@
           <span>FULLSCREEN</span>
         </button>
         <button id="btn-start-game" class="btn-primary-action">
-          START MISSION
+          SINGLE PLAYER
+        </button>
+        <button id="btn-mp" class="btn-secondary-action">
+          MULTIPLAYER
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Multiplayer Lobby Overlay -->
+  <div id="lobby-overlay" class="menu-overlay hidden">
+    <div class="menu-card glass-panel">
+      <h2>MULTIPLAYER LOBBY</h2>
+      <div class="lobby-row">
+        <label>Nickname</label>
+        <input id="lobby-nickname" type="text" maxlength="24" value="Player" />
+      </div>
+      <div class="lobby-row">
+        <button id="btn-mp-create" class="btn-primary-action">CREATE ROOM</button>
+        <input id="lobby-code-input" type="text" maxlength="6" placeholder="ROOM CODE" />
+        <button id="btn-mp-join" class="btn-secondary-action">JOIN</button>
+      </div>
+      <div id="lobby-status" class="lobby-status">Enter a nickname, then create or join a room.</div>
+      <div id="lobby-room" class="lobby-room hidden">
+        <div>Room Code: <strong id="lobby-room-code"></strong></div>
+        <div id="lobby-players"></div>
+        <button id="btn-mp-start" class="btn-primary-action hidden">START MATCH</button>
+        <button id="btn-mp-leave" class="btn-secondary-action">LEAVE</button>
+      </div>
+      <button id="btn-lobby-back" class="btn-secondary-action">BACK</button>
     </div>
   </div>
 
